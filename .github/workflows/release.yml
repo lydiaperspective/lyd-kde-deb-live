@@ -29,6 +29,10 @@ jobs:
             isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin \
             mtools dosfstools rsync
 
+      - name: Fix live-build firmware index lookup
+        run: |
+          bash scripts/patch-live-build-firmware-index.sh
+
       - name: Prepare lydsys include
         run: |
           install -D -m 0755 scripts/lydsys \
@@ -50,6 +54,7 @@ jobs:
           bash -n scripts/lyd-btrfs-postinstall
           bash -n scripts/install-mystical-theme.sh
           bash -n scripts/build-iso.sh
+          bash -n scripts/patch-live-build-firmware-index.sh
           sh -n profiles/desktop/auto/config
           sh -n profiles/server/auto/config
 
