@@ -100,3 +100,22 @@ scripts/lydsetup         interactive post-install setup manager
 ## License
 
 Configuration and scripts in this repository are provided under the MIT License. Debian packages, artwork and other third-party components remain under their respective licenses.
+
+
+## Install the lyd profile on an existing Debian system
+
+You can apply either profile to an existing **Debian 13 (Trixie) amd64** installation without booting or reinstalling from the ISO. Clone the repository, then run the installer as root:
+
+```bash
+git clone https://github.com/lydiaperspective/lyd-kde-deb-live.git
+cd lyd-kde-deb-live
+sudo bash scripts/install-existing-debian.sh desktop
+# or:
+sudo bash scripts/install-existing-debian.sh server
+```
+
+The installer uses the same package list as the corresponding ISO profile. It enables the Debian `contrib`, `non-free`, and `non-free-firmware` archive areas in official Trixie source entries when needed, backing up any source file it changes. It installs `lydsys`, `lydsetup`, `lydhelp`, the pinned `grub-btrfs` integration, and the Mystical GRUB theme helper. The desktop profile additionally installs the Mystical KDE theme, wallpaper first-login helper, and Lyd Mystical Konsole profile. Debian's `kwin-common` package already provides the Aurorae runtime plugin, so the installer does not overwrite it with a second copy.
+
+The installer records logs under `/var/log/lyd-install/` and configuration backups under `/var/backups/lyd-install/`. It does not repartition disks, reinstall Debian, replace the installed bootloader, or run a full system upgrade. It asks before applying the Mystical GRUB theme, replacing the default Firewalld public-zone policy, or running the Btrfs/Snapper layout migration. The Btrfs migration can create `@home` and `@var` subvolumes and edit `/etc/fstab`; review the existing layout before accepting. The server firewall policy allows SSH TCP/22 and Cockpit TCP/9090 and does not open Podman application ports. Existing systems with custom firewall rules should decline that step unless they intend to replace the public-zone configuration.
+
+The script targets Debian 13 on amd64, not Ubuntu, derivatives, or other Debian releases. A reboot is recommended after installation. The in-place path has not yet been validated across every possible pre-existing partition, bootloader, desktop-display-manager, or Btrfs layout; keep a separate backup of important data before applying system-level changes.
