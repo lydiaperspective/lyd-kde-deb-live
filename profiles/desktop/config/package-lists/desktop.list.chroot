@@ -15,6 +15,9 @@ okular
 spectacle
 partitionmanager
 kde-config-sddm
+breeze-gtk-theme
+breeze-cursor-theme
+kde-config-gtk-style
 network-manager
 network-manager-openvpn
 network-manager-openconnect
