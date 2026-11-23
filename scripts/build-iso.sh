@@ -37,7 +37,7 @@ fi
 
 # Keep the post-install path syntax-checked by the same CI build that
 # produces the live images, even though this helper is also used separately.
-for helper in install-existing-debian.sh lyd-btrfs-postinstall install-grub-theme.sh install-mystical-theme.sh stage-grub-btrfs.sh; do
+for helper in lydsys install-existing-debian.sh lyd-btrfs-postinstall install-grub-theme.sh install-mystical-theme.sh stage-grub-btrfs.sh; do
   bash -n "$ROOT_DIR/scripts/$helper"
 done
 
