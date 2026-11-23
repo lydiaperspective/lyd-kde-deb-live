@@ -7,7 +7,7 @@ PROFILE="${1:-}"
 case "$PROFILE" in
   desktop|server) ;;
   *)
-    echo "Usage: $0 {desktop|server}" >&2
+    echo "Usage: bash scripts/build-iso.sh {desktop|server}" >&2
     exit 2
     ;;
 esac
@@ -19,7 +19,7 @@ if [[ ! -f "$PROFILE_DIR/auto/config" ]]; then
 fi
 
 if [[ $EUID -ne 0 ]]; then
-  exec sudo -- "$0" "$PROFILE"
+  exec sudo -- bash "$ROOT_DIR/scripts/build-iso.sh" "$PROFILE"
 fi
 
 command -v lb >/dev/null || {
@@ -37,11 +37,13 @@ lb clean --purge
 lb config
 lb build
 
-ISO="$(find "$PROFILE_DIR" -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
-if [[ -z "$ISO" ]]; then
+SOURCE_ISO="$(find "$PROFILE_DIR" -maxdepth 1 -type f -name '*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+if [[ -z "$SOURCE_ISO" ]]; then
   echo "Build completed but no ISO was found in $PROFILE_DIR" >&2
   exit 1
 fi
 
+ISO="$PROFILE_DIR/lyd-debian-$PROFILE-amd64.iso"
+mv -- "$SOURCE_ISO" "$ISO"
 sha256sum "$ISO" > "$ISO.sha256"
 echo "Build complete: $ISO"
