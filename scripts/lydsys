@@ -338,16 +338,16 @@ EOF
 }
 
 main() {
-  case "\${1:-}" in
+  case "${1:-}" in
     --help|-h|help) show_help; return ;;
     --version|-V) printf 'lydsys %s\n' "$VERSION"; return ;;
     list)
-      for n in "\${!TASKS[@]}"; do printf '%2s  %s\n' "$n" "\${TASKS[$n]}"; done | sort -n
+      for n in "${!TASKS[@]}"; do printf '%2s  %s\n' "$n" "${TASKS[$n]}"; done | sort -n
       return
       ;;
     info)
       printf 'System: %s\nKernel: %s\nArchitecture: %s\n' \
-        "$( . /etc/os-release; echo "\${PRETTY_NAME:-Debian}")" "$(uname -r)" "$(dpkg --print-architecture)"
+        "$( . /etc/os-release; echo "${PRETTY_NAME:-Debian}")" "$(uname -r)" "$(dpkg --print-architecture)"
       printf 'Hostname: %s\nUptime: %s\n' "$(hostname)" "$(uptime -p 2>/dev/null || true)"
       printf 'CPU: %s\n' "$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/, "", $2); print $2; exit}')"
       printf 'Memory: '
@@ -419,17 +419,17 @@ EOF
   while true; do
     local choices=()
     for n in $(seq 1 16); do
-      choices+=("$n" "\${TASKS[$n]}")
+      choices+=("$n" "${TASKS[$n]}")
     done
     local choice
     choice="$(whiptail --title "lydsys $VERSION" --menu \
       "Select an optional system configuration task. Changes are logged to $LOG_FILE." \
-      25 92 17 "\${choices[@]}" 3>&1 1>&2 2>&3)" || break
+      25 92 17 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
     clear
     if run_task "$choice"; then
-      info "Task completed: \${TASKS[$choice]}"
+      info "Task completed: ${TASKS[$choice]}"
     else
-      warn "Task did not complete successfully: \${TASKS[$choice]}"
+      warn "Task did not complete successfully: ${TASKS[$choice]}"
     fi
     pause
   done
