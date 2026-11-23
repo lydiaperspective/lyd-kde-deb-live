@@ -14,7 +14,7 @@ kate
 okular
 spectacle
 partitionmanager
-kde-config-sddm
+sddm-kcm
 network-manager
 network-manager-openvpn
 network-manager-openconnect
