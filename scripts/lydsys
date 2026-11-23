@@ -328,6 +328,70 @@ task_ark_storage() {
   warn "Podman's internal graph root is separate from /ark/Containers; this task does not move container storage."
 }
 
+task_cleanup_desktop() {
+  local candidates=() installed=() pkg plan_file
+  declare -A seen=()
+
+  # Remove the broad Debian KDE task and its optional office/graphics extras,
+  # but leave Plasma itself and the explicitly selected KDE applications alone.
+  for pkg in task-kde-desktop gimp orca kdeaccessibility hunspell-en-us \
+      hyphen-en-us mythes-en-us; do
+    if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'install ok installed'; then
+      candidates+=("$pkg")
+    fi
+  done
+
+  while IFS= read -r pkg; do
+    [[ -n "$pkg" ]] || continue
+    candidates+=("$pkg")
+  done < <(dpkg-query -W -f='${binary:Package}\t${db:Status-Status}\n' 'libreoffice*' 2>/dev/null |
+    awk -F '\t' '$2 == "installed" {print $1}')
+
+  # Deduplicate package names while preserving their order.
+  installed=()
+  for pkg in "${candidates[@]}"; do
+    [[ -n "${seen[$pkg]:-}" ]] && continue
+    seen[$pkg]=1
+    installed+=("$pkg")
+  done
+  candidates=("${installed[@]}")
+
+  if (("${#candidates[@]}" == 0)); then
+    info "No optional office/graphics packages or Debian KDE task package were found."
+    return 0
+  fi
+
+  info "The following optional packages are selected for removal:"
+  printf '  - %s\n' "${candidates[@]}"
+  info "Plasma, SDDM, NetworkManager, the Mystical theme, and the explicitly selected KDE apps are not targeted."
+  confirm "Purge the listed packages?" || {
+    info "Cleanup cancelled; no packages changed."
+    return 0
+  }
+
+  apt-get purge -y "${candidates[@]}"
+
+  plan_file="$(mktemp)"
+  if apt-get -s autoremove --purge >"$plan_file"; then
+    if grep -q '^Remv ' "$plan_file"; then
+      info "APT proposes these additional now-unused dependencies for removal:"
+      grep '^Remv ' "$plan_file" || true
+      if confirm "Remove these automatically detected unused dependencies?"; then
+        apt-get autoremove --purge -y
+      else
+        info "Skipped autoremove; the explicitly selected packages were still purged."
+      fi
+    else
+      info "No additional automatically removable dependencies were found."
+    fi
+  else
+    rm -f "$plan_file"
+    die "Could not simulate APT autoremove; inspect APT before continuing."
+  fi
+  rm -f "$plan_file"
+  info "Desktop cleanup finished."
+}
+
 task_headless() {
   if ! dpkg-query -W -f='${Status}' task-kde-desktop 2>/dev/null | grep -q 'install ok installed'; then
     warn "KDE task package not detected. No desktop removal performed."
@@ -361,6 +425,7 @@ declare -A TASKS=(
   [17]="Add woman command as a man alias"
   [18]="Apply the Mystical KDE theme"
   [19]="Apply the Mystical GRUB boot theme"
+  [20]="Clean up optional desktop applications"
 )
 
 run_task() {
@@ -384,6 +449,7 @@ run_task() {
     17) task_woman ;;
     18) task_mystical_theme ;;
     19) task_grub_theme ;;
+    20) task_cleanup_desktop ;;
     *) die "Unknown task: $1" ;;
   esac
 }
@@ -487,13 +553,13 @@ EOF
   fi
   while true; do
     local choices=()
-    for n in $(seq 1 19); do
+    for n in $(seq 1 20); do
       choices+=("$n" "${TASKS[$n]}")
     done
     local choice
     choice="$(whiptail --title "lydsys $VERSION" --menu \
       "Select an optional system configuration task. Changes are logged to $LOG_FILE." \
-      28 96 19 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
+      28 96 20 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
     clear
     if run_task "$choice"; then
       info "Task completed: ${TASKS[$choice]}"
