@@ -86,7 +86,7 @@ if [[ -z "$SOURCE_ISO" ]]; then
   exit 1
 fi
 
-ISO="$PROFILE_DIR/lyd-debian-$PROFILE-amd64.iso"
+ISO="$PROFILE_DIR/lyd-deb-$PROFILE.iso"
 mv -- "$SOURCE_ISO" "$ISO"
 sha256sum "$ISO" > "$ISO.sha256"
 echo "Build complete: $ISO"
