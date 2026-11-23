@@ -1,0 +1,19 @@
+# live-build generated content
+**/chroot/
+**/binary/
+**/cache/
+**/config/*.binary
+**/config/*.bootstrap
+**/config/*.chroot
+**/config/*.source
+**/config/*.stage
+**/config/*.tmp
+*.iso
+*.img
+*.log
+*.build
+*.buildlog
+*.contents
+*.packages
+*.manifest
+*.zsync
