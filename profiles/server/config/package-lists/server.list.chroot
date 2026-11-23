@@ -37,6 +37,7 @@ firmware-linux-nonfree
 firmware-misc-nonfree
 network-manager
 nftables
+firewalld
 chrony
 podman
 podman-compose
