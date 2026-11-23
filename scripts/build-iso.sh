@@ -35,6 +35,12 @@ install -m 0755 "$ROOT_DIR/scripts/lydhelp" \
 install -m 0755 "$ROOT_DIR/scripts/lyd-btrfs-postinstall" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/sbin/lyd-btrfs-postinstall"
 
+if [[ "$PROFILE" == "desktop" ]]; then
+  bash "$ROOT_DIR/scripts/install-mystical-theme.sh" \
+    --root "$PROFILE_DIR/config/includes.chroot" \
+    --source "$ROOT_DIR/themes/mystical"
+fi
+
 cd "$PROFILE_DIR"
 chmod +x auto/config
 lb clean --purge
