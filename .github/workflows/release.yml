@@ -124,6 +124,19 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Split ISOs into GitHub-compatible release assets
+        run: |
+          set -euo pipefail
+          # GitHub Releases rejects individual assets at or above 2 GiB.
+          # Keep each part below that limit and retain the original ISO checksum.
+          for iso in release-assets/*.iso; do
+            [ -f "$iso" ] || continue
+            split --bytes=1900M --numeric-suffixes=0 --suffix-length=3 \
+              "$iso" "$iso.part-"
+            rm -- "$iso"
+          done
+          install -m 0644 scripts/recombine-isos.sh release-assets/recombine-isos.sh
+
       - name: Publish rolling latest build
         if: github.ref == 'refs/heads/main'
         env:
