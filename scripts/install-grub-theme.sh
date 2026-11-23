@@ -5,13 +5,15 @@ set -Eeuo pipefail
 ROOT=/
 SOURCE=
 ISO_OUTPUT=
+RESTORE=0
 while (($#)); do
   case "$1" in
     --root) ROOT="${2:?Missing root path}"; shift 2 ;;
     --source) SOURCE="${2:?Missing source SVG}"; shift 2 ;;
     --iso-output) ISO_OUTPUT="${2:?Missing ISO output directory}"; shift 2 ;;
+    --restore) RESTORE=1; shift ;;
     -h|--help)
-      echo "Usage: $0 [--root TARGET_ROOT] [--source BACKGROUND.svg] [--iso-output DIRECTORY]"
+      echo "Usage: $0 [--root TARGET_ROOT] [--source BACKGROUND.svg] [--iso-output DIRECTORY] [--restore]"
       exit 0
       ;;
     *) echo "Unknown option: $1" >&2; exit 2 ;;
@@ -24,6 +26,18 @@ dest() {
   local relative="${1#/}"
   if [[ "$ROOT" == "/" ]]; then printf '/%s' "$relative"; else printf '%s/%s' "$ROOT" "$relative"; fi
 }
+
+if [[ "$RESTORE" == "1" ]]; then
+  [[ "$ROOT" == "/" ]] || { echo "--restore can only be used on the running system." >&2; exit 2; }
+  [[ -x /usr/sbin/update-grub ]] || { echo "update-grub is unavailable." >&2; exit 1; }
+  BACKUP="$(find /etc/default -maxdepth 1 -type f -name 'grub.lyd-backup-*' -printf '%f\\n' | sort | tail -n1)"
+  [[ -n "$BACKUP" ]] || { echo "No lyd GRUB backup was found in /etc/default." >&2; exit 1; }
+  cp -a "/etc/default/$BACKUP" /etc/default/grub
+  rm -rf /boot/grub/themes/lyd-mystical
+  update-grub
+  echo "Restored /etc/default/grub from /etc/default/$BACKUP."
+  exit 0
+fi
 
 SYSTEM_THEME="$(dest /usr/share/lyd/grub-theme/mystical)"
 if [[ "$ROOT" == "/" && -f "$SYSTEM_THEME/theme.txt" && -f "$SYSTEM_THEME/background.png" ]]; then
