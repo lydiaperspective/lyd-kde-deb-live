@@ -69,4 +69,4 @@ print("Patched kernel and Debian Installer Contents lookups to use component arc
 PY
 
 grep -F '/${_ARCHIVE_AREA}/Contents-${LB_ARCHITECTURES}.gz' "$KERNEL_SCRIPT" >/dev/null
-grep -F 'LB_PARENT_ARCHIVE_AREAS="${LB_ARCHIVE_AREAS}"' "$INSTALLER_SCRIPT" >/dev/null
+grep -F 'LB_PARENT_ARCHIVE_AREAS:-${LB_ARCHIVE_AREAS}' "$INSTALLER_SCRIPT" >/dev/null
