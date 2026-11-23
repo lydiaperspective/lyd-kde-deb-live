@@ -121,6 +121,19 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Split ISOs into GitHub-compatible release assets
+        run: |
+          set -euo pipefail
+          # GitHub Releases rejects individual assets at or above 2 GiB.
+          # Keep each part below that limit and retain the original ISO checksum.
+          for iso in release-assets/*.iso; do
+            [ -f "$iso" ] || continue
+            split --bytes=1900M --numeric-suffixes=0 --suffix-length=3 \
+              "$iso" "$iso.part-"
+            rm -- "$iso"
+          done
+          install -m 0644 scripts/recombine-isos.sh release-assets/recombine-isos.sh
+
       - name: Publish rolling latest build
         if: github.ref == 'refs/heads/main'
         env:
@@ -135,7 +148,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$TARGET_SHA" \
             --title "lyd Debian Live - Latest" \
-            --notes "Automatically updated from the latest successful build of the main branch.\n\nCommit: $TARGET_SHA\n\nThis is a rolling development build; assets are replaced by the next successful main-branch build." \
+            --notes "Automatically updated from the latest successful build of the main branch.\n\nCommit: $TARGET_SHA\n\nThis is a rolling development build; assets are replaced by the next successful main-branch build. Download every .part file for an ISO, then run recombine-isos.sh in the same directory to reconstruct and verify it." \
             --prerelease
 
       - name: Publish versioned release
