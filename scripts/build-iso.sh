@@ -68,8 +68,7 @@ if [[ "$PROFILE" == "desktop" ]]; then
   bash "$ROOT_DIR/scripts/install-mystical-theme.sh" \
     --root "$PROFILE_DIR/config/includes.chroot" \
     --source "$ROOT_DIR/themes/mystical"
-  bash "$ROOT_DIR/scripts/build-aurorae.sh" \
-    --output-dir "$PROFILE_DIR/config/packages.chroot"
+  bash "$ROOT_DIR/scripts/build-aurorae.sh"
 else
   bash "$ROOT_DIR/scripts/install-grub-theme.sh" \
     --root "$PROFILE_DIR/config/includes.chroot" \

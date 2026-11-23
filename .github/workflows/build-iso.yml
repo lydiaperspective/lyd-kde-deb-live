@@ -75,8 +75,7 @@ jobs:
             bash scripts/install-mystical-theme.sh \
               --root "profiles/desktop/config/includes.chroot" \
               --source "$GITHUB_WORKSPACE/themes/mystical"
-            bash scripts/build-aurorae.sh \
-              --output-dir "profiles/desktop/config/packages.chroot"
+            bash scripts/build-aurorae.sh
           else
             bash scripts/install-grub-theme.sh \
               --root "profiles/server/config/includes.chroot" \
