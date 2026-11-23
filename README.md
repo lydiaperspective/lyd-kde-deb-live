@@ -17,7 +17,7 @@ On a Debian 13 build host, install the build dependencies:
 
 ```bash
 sudo apt update
-sudo apt install live-build debootstrap squashfs-tools xorriso isolinux syslinux-common grub-common grub-pc-bin grub-efi-amd64-bin librsvg2-bin fonts-dejavu-core mtools dosfstools rsync
+sudo apt install git make python3 live-build debootstrap squashfs-tools xorriso isolinux syslinux-common grub-common grub-pc-bin grub-efi-amd64-bin librsvg2-bin fonts-dejavu-core mtools dosfstools rsync
 ```
 
 The build host must use Debian 13 (Trixie) live-build version `1:20250505` or newer. Ubuntu 24.04 ships an older live-build with obsolete Debian Installer package names; the local script now checks this and stops rather than running a known-incompatible build. GitHub Actions builds inside a Debian Trixie container.
@@ -44,6 +44,7 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 - KDE Plasma desktop task and SDDM
 - Firefox ESR, NetworkManager, firmware, Flatpak and Discover Flatpak support
 - Common utilities; optional gaming performance and virtualization components can be added later with `lydsetup`
+- Snapper and `grub-btrfs` snapshot menu integration on the installed system
 - The **Mystical** KDE Global Theme: midnight-plum colour scheme, Plasma panel/widget style, moonlit wallpaper, animated Plasma splash, Breeze-compatible GTK integration, and original lunar/botanical artwork
 - The Mystical GRUB boot theme on the desktop ISO UEFI menu, using the same moonlit artwork and plum/lavender/gold palette
 - `lydsys` and the `lydhelp` command-line reference
@@ -51,7 +52,7 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 ### Server
 - Debian 13 Trixie, amd64
 - No desktop environment
-- OpenSSH server, Podman, Cockpit, tuned, btrfs-progs, Snapper and common administration tools
+- OpenSSH server, Podman, Cockpit, tuned, btrfs-progs, Snapper, GRUB snapshot integration and common administration tools
 - The Mystical GRUB theme assets and installer helper, without adding desktop packages
 - `lydsys`
 - The same guided UEFI/GPT Btrfs installation layout and post-install `@home`/Snapper setup as the desktop image
@@ -62,7 +63,7 @@ Run `sudo lydsys` after installation for system configuration tasks. Run `lydset
 
 The Mystical theme is copied from the Lyd Ark Themes project into this repository under `themes/mystical/`. It is installed in the desktop image as a KDE Plasma 6 Global Theme, standalone colour scheme, Plasma Style, wallpaper package, and Plasma splash package. The installer also preserves the original illustrated moon, triple-moon, crystal, lavender, sage, and pentacle SVG assets. System XDG defaults select the Mystical colour scheme and Plasma Style for new desktop users while retaining Breeze's application widget style, icon theme, cursor, and window-decoration implementation for compatibility. GTK integration uses Debian's Breeze GTK theme and KDE GTK configuration module so GTK applications remain visually coordinated. Existing users can apply the full package from System Settings → Appearance → Global Theme or with `sudo lydsys run 18`. The SVG artwork pack is not represented as a complete application icon theme, and custom cursor artwork / a custom SDDM login theme are not included yet. The GRUB theme uses the existing moonlit wallpaper, rendered to PNG with GRUB-compatible fonts during the image build. Debian Trixie live-build handles the current installer and firmware package metadata; the obsolete Ubuntu live-build compatibility patch is no longer run.
 
-The installer defaults to a guided UEFI/GPT layout with a 1 GiB EFI System Partition, an 8 GiB swap partition, and the remaining space as Btrfs. The installer still asks you to choose the target disk and confirm partition changes; it does not silently erase a disk. Debian Installer creates the root subvolume (`@rootfs`), and a late-install step creates a sibling `@home` subvolume, migrates the initial home-directory contents, applies `noatime,compress=zstd:3`, and configures Snapper/timers when Snapper is present. This post-install path needs testing in both UEFI virtual machines and real hardware before release. Manual partitioning remains available, but the automatic post-install subvolume step expects the standard Btrfs root layout. Snapper snapshots are not backups.
+The installer defaults to a guided UEFI/GPT layout with a 1 GiB EFI System Partition, an 8 GiB swap partition, and the remaining space as Btrfs. The installer still asks you to choose the target disk and confirm partition changes; it does not silently erase a disk. Debian Installer creates the root subvolume (`@rootfs`), and the post-install step creates sibling `@home` and `@var` subvolumes, migrates their initial contents, applies `noatime,compress=zstd:3`, and configures Snapper with timeline/cleanup timers. Keeping `/var` outside the Snapper root snapshots is required for the intended read-only snapshot boot workflow. Both profiles stage upstream `grub-btrfs` v4.14, with a Debian Btrfs UUID parsing compatibility patch, and enable `grub-btrfsd` to refresh the GRUB snapshot submenu when snapshots are created or deleted. The installer creates an initial Snapper snapshot and regenerates GRUB. This is snapshot boot support, not an automatic persistent rollback workflow; a read-only snapshot boot should be treated as a recovery environment. This post-install path needs testing in both UEFI virtual machines and real hardware before release. Manual partitioning remains available, but the automatic post-install subvolume step expects the standard Btrfs root layout. Snapper snapshots are not backups.
 
 For Ivy Bridge Intel HD Graphics (such as the i7-3770S' integrated GPU), the legacy VA-API option installs Debian's `i965-va-driver` and `i965-va-driver-shaders` packages plus `vainfo`/FFmpeg. Debian documents Ivy Bridge support in this driver family. Encoding support depends on the codec and hardware entry point; verify with `vainfo` and your application. [Debian package details](https://packages.debian.org/trixie/i965-va-driver) · [shader package](https://packages.debian.org/trixie/i965-va-driver-shaders).
 
@@ -85,6 +86,7 @@ themes/mystical/         copied Ark theme source and KDE Plasma components
 scripts/build-iso.sh     local profile builder
 scripts/install-mystical-theme.sh  stages Mystical KDE appearance into desktop image
 scripts/install-grub-theme.sh      stages/applies Mystical GRUB theme
+scripts/stage-grub-btrfs.sh         stages pinned upstream GRUB snapshot integration
 scripts/9999-grub-theme.hook.binary  enables theme in desktop UEFI live GRUB menu
 scripts/lydsys           Debian-specific system configuration utility
 scripts/lydsetup         interactive post-install setup manager
