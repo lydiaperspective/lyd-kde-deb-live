@@ -1,5 +1,5 @@
 #!/bin/sh
-# Apply the Mystical theme to the UEFI GRUB menu in the generated hybrid ISO.
+# Apply the Mystical theme to the desktop ISO's UEFI GRUB menu.
 set -eu
 
 GRUB_CFG="binary/boot/grub/grub.cfg"
@@ -20,27 +20,16 @@ if grep -q 'lyd-mystical/theme.txt' "$GRUB_CFG"; then
 fi
 
 tmp="$(mktemp)"
-awk '
-  {
-    print
-    if (!inserted && ($0 ~ /^[[:space:]]*search .*--set=root/ || $0 ~ /^[[:space:]]*set root=/)) {
-      print ""
-      print "insmod gfxterm"
-      print "insmod png"
-      print "loadfont ($root)/boot/grub/themes/lyd-mystical/title.pf2"
-      print "loadfont ($root)/boot/grub/themes/lyd-mystical/menu.pf2"
-      print "set gfxmode=auto"
-      print "terminal_output gfxterm"
-      print "set theme=($root)/boot/grub/themes/lyd-mystical/theme.txt"
-      inserted=1
-    }
-  }
-  END { if (!inserted) exit 3 }
-' "$GRUB_CFG" > "$tmp" || {
-  rm -f "$tmp"
-  echo "Could not locate the GRUB root assignment in $GRUB_CFG" >&2
-  exit 1
-}
+cat > "$tmp" <<'GRUB'
+# lyd Mystical graphical boot menu
+if insmod gfxterm && insmod png && loadfont "$prefix/themes/lyd-mystical/title.pf2"; then
+  loadfont "$prefix/themes/lyd-mystical/menu.pf2"
+  set gfxmode=auto
+  terminal_output gfxterm
+  set theme="$prefix/themes/lyd-mystical/theme.txt"
+fi
+GRUB
+cat "$GRUB_CFG" >> "$tmp"
 cat "$tmp" > "$GRUB_CFG"
 rm -f "$tmp"
 echo "Mystical theme enabled in $GRUB_CFG"
