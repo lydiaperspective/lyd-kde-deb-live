@@ -37,11 +37,14 @@ jobs:
       - name: Build ISO
         working-directory: profiles/${{ matrix.profile }}
         run: |
+          chmod +x auto/config
           sudo lb clean --purge
           sudo lb config
           sudo lb build
-          ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)"
-          test -n "$ISO"
+          SOURCE_ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)"
+          test -n "$SOURCE_ISO"
+          ISO="lyd-debian-${{ matrix.profile }}-amd64.iso"
+          mv -- "$SOURCE_ISO" "$ISO"
           sha256sum "$ISO" > "$ISO.sha256"
 
       - name: Upload release build artifact
