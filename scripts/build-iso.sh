@@ -51,6 +51,11 @@ install -m 0755 "$ROOT_DIR/scripts/lydhelp" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/bin/lydhelp"
 install -m 0755 "$ROOT_DIR/scripts/lyd-btrfs-postinstall" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/sbin/lyd-btrfs-postinstall"
+if [[ "$PROFILE" == "server" ]]; then
+  install -m 0755 "$ROOT_DIR/scripts/lyd-firewall-postinstall" \
+    "$PROFILE_DIR/config/includes.chroot/usr/local/sbin/lyd-firewall-postinstall"
+  bash -n "$ROOT_DIR/scripts/lyd-firewall-postinstall"
+fi
 bash "$ROOT_DIR/scripts/stage-grub-btrfs.sh" "$PROFILE_DIR/config/includes.chroot"
 
 if [[ "$PROFILE" == "desktop" ]]; then
