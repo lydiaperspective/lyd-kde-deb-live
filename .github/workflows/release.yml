@@ -130,8 +130,9 @@ jobs:
         run: |
           # The GitHub CLI deletes the release and its tag through the API.
           # No local git checkout is needed in this publishing-only job.
-          gh release delete "$TAG" --cleanup-tag --yes || true
+          gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
           gh release create "$TAG" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
             --target "$TARGET_SHA" \
             --title "lyd Debian Live - Latest" \
             --notes "Automatically updated from the latest successful build of the main branch.\n\nCommit: $TARGET_SHA\n\nThis is a rolling development build; assets are replaced by the next successful main-branch build." \
@@ -144,5 +145,6 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           gh release create "$TAG" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
             --title "lyd Debian Live $TAG" \
             --generate-notes
