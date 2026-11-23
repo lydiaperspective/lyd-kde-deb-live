@@ -17,7 +17,7 @@ On a Debian 13 build host, install the build dependencies:
 
 ```bash
 sudo apt update
-sudo apt install live-build debootstrap squashfs-tools xorriso \\\n  isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin \\\n  mtools dosfstools
+sudo apt install live-build debootstrap squashfs-tools xorriso isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin mtools dosfstools
 ```
 
 Build either image:
