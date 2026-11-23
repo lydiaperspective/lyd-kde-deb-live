@@ -20,16 +20,6 @@ done
 
 ROOT="$(realpath -m "$ROOT")"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -z "$SOURCE" ]]; then
-  SOURCE="$SCRIPT_DIR/../themes/mystical/wallpaper/contents/images/1920x1080.svg"
-fi
-SOURCE="$(realpath -e "$SOURCE")"
-[[ -f "$SOURCE" ]] || { echo "Background SVG not found: $SOURCE" >&2; exit 1; }
-command -v rsvg-convert >/dev/null || { echo "Missing rsvg-convert (install librsvg2-bin)." >&2; exit 1; }
-command -v grub-mkfont >/dev/null || { echo "Missing grub-mkfont (install grub-common)." >&2; exit 1; }
-FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
-[[ -r "$FONT" ]] || { echo "Missing DejaVu Sans font (install fonts-dejavu-core)." >&2; exit 1; }
-
 dest() {
   local relative="${1#/}"
   if [[ "$ROOT" == "/" ]]; then printf '/%s' "$relative"; else printf '%s/%s' "$ROOT" "$relative"; fi
@@ -39,6 +29,11 @@ SYSTEM_THEME="$(dest /usr/share/lyd/grub-theme/mystical)"
 if [[ "$ROOT" == "/" && -f "$SYSTEM_THEME/theme.txt" && -f "$SYSTEM_THEME/background.png" ]]; then
   WORK=
 else
+  if [[ -z "$SOURCE" ]]; then
+    SOURCE="$SCRIPT_DIR/../themes/mystical/wallpaper/contents/images/1920x1080.svg"
+  fi
+  SOURCE="$(realpath -e "$SOURCE")"
+  [[ -f "$SOURCE" ]] || { echo "Background SVG not found: $SOURCE" >&2; exit 1; }
   command -v rsvg-convert >/dev/null || { echo "Missing rsvg-convert (install librsvg2-bin)." >&2; exit 1; }
   command -v grub-mkfont >/dev/null || { echo "Missing grub-mkfont (install grub-common)." >&2; exit 1; }
   FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
