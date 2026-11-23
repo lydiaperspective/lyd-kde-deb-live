@@ -8,7 +8,6 @@ plasma-pa
 plasma-discover
 plasma-discover-backend-flatpak
 flatpak
-firefox-esr
 konsole
 dolphin
 ark
@@ -38,10 +37,8 @@ usbutils
 hwinfo
 inxi
 htop
-btop
 nvtop
 fastfetch
-vim
 nano
 fish
 man-db

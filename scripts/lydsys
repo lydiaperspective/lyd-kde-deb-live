@@ -332,14 +332,24 @@ task_cleanup_desktop() {
   local candidates=() installed=() pkg plan_file
   declare -A seen=()
 
-  # Remove the broad Debian KDE task and its optional office/graphics extras,
-  # but leave Plasma itself and the explicitly selected KDE applications alone.
+  # Remove optional KDE/PIM applications and other unwanted desktop utilities,
+  # while preserving Plasma and the core applications selected for this profile.
   for pkg in task-kde-desktop gimp orca kdeaccessibility hunspell-en-us \
-      hyphen-en-us mythes-en-us; do
+      hyphen-en-us mythes-en-us akregator dragonplayer juk kaddressbook kmail \
+      kmag konqueror kmouth ktnef korganizer pim-data-exporter \
+      pim-sieve-editor kdepim-themeeditors xterm firefox-esr btop vim; do
     if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'install ok installed'; then
       candidates+=("$pkg")
     fi
   done
+
+  # ImageMagick's command-line applications may be installed through a
+  # versioned package rather than the imagemagick metapackage.
+  while IFS= read -r pkg; do
+    [[ -n "$pkg" ]] || continue
+    candidates+=("$pkg")
+  done < <(dpkg-query -W -f='${binary:Package}\t${db:Status-Status}\n' 'imagemagick*' 2>/dev/null |
+    awk -F '\t' '$2 == "installed" {print $1}')
 
   while IFS= read -r pkg; do
     [[ -n "$pkg" ]] || continue
@@ -357,13 +367,13 @@ task_cleanup_desktop() {
   candidates=("${installed[@]}")
 
   if (("${#candidates[@]}" == 0)); then
-    info "No optional office/graphics packages or Debian KDE task package were found."
+    info "No selected optional desktop packages or Debian KDE task package were found."
     return 0
   fi
 
   info "The following optional packages are selected for removal:"
   printf '  - %s\n' "${candidates[@]}"
-  info "Plasma, SDDM, NetworkManager, the Mystical theme, and the explicitly selected KDE apps will be preserved."
+  info "Plasma, SDDM, NetworkManager, the Mystical theme, and the retained core KDE apps will be preserved."
   confirm "Purge the listed packages?" || {
     info "Cleanup cancelled; no packages changed."
     return 0
@@ -374,7 +384,7 @@ task_cleanup_desktop() {
   local keep=()
   for pkg in kde-plasma-desktop plasma-desktop plasma-workspace sddm \
       network-manager plasma-nm plasma-pa konsole dolphin ark kate okular \
-      kde-spectacle partitionmanager firefox-esr; do
+      kde-spectacle partitionmanager; do
     if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'install ok installed'; then
       keep+=("$pkg")
     fi
