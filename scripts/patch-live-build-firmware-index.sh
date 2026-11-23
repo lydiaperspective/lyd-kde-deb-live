@@ -18,8 +18,8 @@ import sys
 kernel_path = Path(sys.argv[1])
 installer_path = Path(sys.argv[2])
 
-# The chroot kernel helper in Ubuntu's live-build package expects the old
-# suite-root Contents index. Debian now publishes one index per component.
+# Debian publishes Contents indexes inside each archive component, rather
+# than at the suite root as expected by older live-build releases.
 text = kernel_path.read_text()
 old_parent = 'wget ${WGET_OPTIONS} ${LB_PARENT_MIRROR_CHROOT}/dists/${LB_PARENT_DISTRIBUTION}/Contents-${LB_ARCHITECTURES}.gz -O - | gunzip -c > cache/contents.chroot/contents.${LB_PARENT_DISTRIBUTION}.${LB_ARCHITECTURES}'
 new_parent = '''# Debian publishes Contents indexes inside each archive component.
@@ -44,33 +44,30 @@ if "/${_ARCHIVE_AREA}/Contents-${LB_ARCHITECTURES}.gz" not in text:
     raise SystemExit("Could not patch the kernel helper's Contents lookup")
 kernel_path.write_text(text)
 
-# The Debian Installer helper has a separate firmware lookup. The Ubuntu
-# live-build package omits the component directory from the URL it constructs.
+# Ubuntu's packaged live-build can leave LB_PARENT_ARCHIVE_AREAS empty in
+# non-derivative Debian builds. The installer firmware scan then constructs
+# the invalid URL .../dists/trixie//Contents-amd64.gz. Reuse the configured
+# archive areas for the parent mirror in that case.
 text = installer_path.read_text()
-old_parent_url = '/dists/${LB_PARENT_DISTRIBUTION}/Contents-${LB_ARCHITECTURES}.gz'
-new_parent_url = '/dists/${LB_PARENT_DISTRIBUTION}/${_PARENT_ARCHIVE_AREA}/Contents-${LB_ARCHITECTURES}.gz'
-old_derivative_url = '/dists/${LB_DISTRIBUTION}/Contents-${LB_ARCHITECTURES}.gz'
-new_derivative_url = '/dists/${LB_DISTRIBUTION}/${_ARCHIVE_AREA}/Contents-${LB_ARCHITECTURES}.gz'
+marker = "Set_defaults"
+fallback = '''Set_defaults
 
-changed = False
-if old_parent_url in text:
-    text = text.replace(old_parent_url, new_parent_url)
-    changed = True
-if old_derivative_url in text:
-    text = text.replace(old_derivative_url, new_derivative_url)
-    changed = True
-
-if not changed and (
-    new_parent_url not in text and new_derivative_url not in text
-):
-    raise SystemExit("Could not find the Debian Installer firmware Contents lookup")
-
-if old_parent_url in text or old_derivative_url in text:
-    raise SystemExit("Debian Installer Contents lookup still contains a suite-root URL")
-
+# Debian is not a derivative: use the configured archive components for
+# the parent-mirror firmware Contents lookup as well.
+if [ "${LB_DERIVATIVE}" != "true" ] && [ -z "${LB_PARENT_ARCHIVE_AREAS:-}" ]
+then
+    LB_PARENT_ARCHIVE_AREAS="${LB_ARCHIVE_AREAS}"
+fi'''
+if 'LB_PARENT_ARCHIVE_AREAS="${LB_ARCHIVE_AREAS}"' not in text:
+    if marker not in text:
+        raise SystemExit("Could not find Set_defaults in Debian Installer helper")
+    text = text.replace(marker, fallback, 1)
 installer_path.write_text(text)
-print("Patched both live-build kernel and Debian Installer firmware index lookups.")
+
+if 'LB_PARENT_ARCHIVE_AREAS="${LB_ARCHIVE_AREAS}"' not in installer_path.read_text():
+    raise SystemExit("Debian Installer archive-area fallback was not applied")
+print("Patched kernel Contents lookup and Debian Installer parent archive-area fallback.")
 PY
 
 grep -F '/${_ARCHIVE_AREA}/Contents-${LB_ARCHITECTURES}.gz' "$KERNEL_SCRIPT" >/dev/null
-grep -F '/${_PARENT_ARCHIVE_AREA}/Contents-${LB_ARCHITECTURES}.gz' "$INSTALLER_SCRIPT" >/dev/null
+grep -F 'LB_PARENT_ARCHIVE_AREAS="${LB_ARCHIVE_AREAS}"' "$INSTALLER_SCRIPT" >/dev/null
