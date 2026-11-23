@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Configure the server profile's default Firewalld policy.
+set -Eeuo pipefail
+
+LOG_FILE=/var/log/lyd-firewall-postinstall.log
+mkdir -p /var/log
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+log() { printf '[lyd-firewall] %s\n' "$*"; }
+fail() { log "ERROR: $*"; exit 1; }
+
+[[ $EUID -eq 0 ]] || fail "Must run as root."
+for tool in python3 systemctl install; do
+  command -v "$tool" >/dev/null 2>&1 || fail "Required command is missing: $tool"
+done
+command -v firewall-cmd >/dev/null 2>&1 || fail "Firewalld is not installed."
+
+install -d -m 0755 /etc/firewalld/zones
+
+# Use the public zone as the default for interfaces not assigned elsewhere.
+python3 <<'PY'
+from pathlib import Path
+import re
+
+path = Path("/etc/firewalld/firewalld.conf")
+text = path.read_text() if path.exists() else ""
+line = "DefaultZone=public"
+if re.search(r"(?m)^\s*#?\s*DefaultZone\s*=", text):
+    text = re.sub(r"(?m)^\s*#?\s*DefaultZone\s*=.*$", line, text, count=1)
+else:
+    text = text.rstrip() + ("\n" if text.strip() else "") + line + "\n"
+path.write_text(text)
+PY
+
+# Only expose remote administration services provided by this image:
+# SSH (22/tcp) and Cockpit (9090/tcp). Podman-published application ports
+# are intentionally not opened globally; add them when deploying a service.
+cat > /etc/firewalld/zones/public.xml <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<zone>
+  <short>Public</short>
+  <description>Default zone for lyd server installations.</description>
+  <service name="ssh"/>
+  <port port="9090" protocol="tcp"/>
+</zone>
+XML
+chmod 0644 /etc/firewalld/zones/public.xml
+
+# Enable the firewall and the server's remote administration endpoints
+# for the installed system's first boot.
+systemctl --root=/ enable firewalld.service ssh.service cockpit.socket
+
+log "Firewalld configured with the public zone."
+log "Allowed inbound: SSH TCP/22 and Cockpit TCP/9090."
+log "Podman application ports remain closed until explicitly configured."
