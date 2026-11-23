@@ -7,6 +7,8 @@ cd "$SCRIPT_DIR"
 
 shopt -s nullglob
 parts_found=0
+cleanup_parts=()
+cleanup_checksums=()
 
 for first_part in ./*.iso.part-000; do
   [ -f "$first_part" ] || continue
@@ -32,6 +34,8 @@ for first_part in ./*.iso.part-000; do
   fi
 
   printf 'Verified: %s\n' "$iso"
+  cleanup_parts+=( "${parts[@]}" )
+  cleanup_checksums+=( "$checksum" )
   parts_found=1
 done
 
@@ -39,3 +43,15 @@ if [ "$parts_found" -eq 0 ]; then
   printf 'No ISO part sets found. Keep this script beside the downloaded .part-* and .sha256 files.\n' >&2
   exit 1
 fi
+
+printf '\nAll reconstructed ISO files passed SHA256 verification.\n'
+read -r -p "Delete the downloaded .part-* files and matching .iso.sha256 files? [y/N] " reply
+case "$reply" in
+  [yY]|[yY][eE][sS])
+    rm -f -- "${cleanup_parts[@]}" "${cleanup_checksums[@]}"
+    printf 'Deleted the downloaded parts and checksum files. Reconstructed ISO files were kept.\n'
+    ;;
+  *)
+    printf 'Keeping the downloaded parts and checksum files.\n'
+    ;;
+esac
