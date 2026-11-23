@@ -363,11 +363,25 @@ task_cleanup_desktop() {
 
   info "The following optional packages are selected for removal:"
   printf '  - %s\n' "${candidates[@]}"
-  info "Plasma, SDDM, NetworkManager, the Mystical theme, and the explicitly selected KDE apps are not targeted."
+  info "Plasma, SDDM, NetworkManager, the Mystical theme, and the explicitly selected KDE apps will be preserved."
   confirm "Purge the listed packages?" || {
     info "Cleanup cancelled; no packages changed."
     return 0
   }
+
+  # Preserve the lean KDE desktop and its core applications even on systems
+  # where the old tasksel package originally installed them as dependencies.
+  local keep=()
+  for pkg in kde-plasma-desktop plasma-desktop plasma-workspace sddm \
+      network-manager plasma-nm plasma-pa konsole dolphin ark kate okular \
+      kde-spectacle partitionmanager firefox-esr; do
+    if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'install ok installed'; then
+      keep+=("$pkg")
+    fi
+  done
+  if (("${#keep[@]}" > 0)); then
+    apt-mark manual "${keep[@]}"
+  fi
 
   apt-get purge -y "${candidates[@]}"
 
