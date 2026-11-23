@@ -33,10 +33,13 @@ jobs:
         run: |
           install -D -m 0755 scripts/lydsys \
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lydsys"
+          install -D -m 0755 scripts/lydhelp \
+            "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/bin/lydhelp"
 
       - name: Validate shell scripts
         run: |
           bash -n scripts/lydsys
+          bash -n scripts/lydhelp
           bash -n scripts/build-iso.sh
           sh -n profiles/desktop/auto/config
           sh -n profiles/server/auto/config
