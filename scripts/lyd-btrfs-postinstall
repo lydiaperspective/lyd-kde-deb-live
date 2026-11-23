@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Complete the default lyd Btrfs layout from inside the installed target.
+# Finish the default Btrfs layout and configure Snapper + GRUB snapshot boot.
 set -Eeuo pipefail
 
 LOG_FILE=/var/log/lyd-btrfs-postinstall.log
@@ -10,43 +10,47 @@ log() { printf '[lyd-btrfs] %s\n' "$*"; }
 fail() { log "ERROR: $*"; exit 1; }
 
 [[ $EUID -eq 0 ]] || fail "Must run as root."
-command -v btrfs >/dev/null 2>&1 || { log "Btrfs tools unavailable; skipping optional post-install setup."; exit 0; }
-command -v findfs >/dev/null 2>&1 || { log "findfs unavailable; skipping optional post-install setup."; exit 0; }
+for tool in btrfs findfs blkid python3 snapper update-grub; do
+  command -v "$tool" >/dev/null 2>&1 || fail "Required command is missing: $tool"
+done
+[[ -x /etc/grub.d/41_snapshots-btrfs ]] || fail "grub-btrfs snapshot generator is not installed."
+[[ -x /usr/bin/grub-btrfsd ]] || fail "grub-btrfsd is not installed."
 
 ROOT_SPEC="$(awk '$1 !~ /^#/ && $2 == "/" && $3 == "btrfs" { print $1; exit }' /etc/fstab)"
 [[ -n "$ROOT_SPEC" ]] || { log "No Btrfs root entry found; preserving the manually selected layout."; exit 0; }
-
 ROOT_DEVICE="$(findfs "$ROOT_SPEC" 2>/dev/null || true)"
-[[ -b "$ROOT_DEVICE" ]] || { log "Could not resolve Btrfs root device from $ROOT_SPEC; skipping."; exit 0; }
+[[ -b "$ROOT_DEVICE" ]] || fail "Could not resolve Btrfs root device from $ROOT_SPEC."
+ROOT_UUID="$(blkid -s UUID -o value "$ROOT_DEVICE")"
+[[ -n "$ROOT_UUID" ]] || fail "Could not read the Btrfs filesystem UUID."
 
-if awk '$1 !~ /^#/ && $2 == "/home" { found=1 } END { exit !found }' /etc/fstab; then
-  log "An existing /home mount is configured; preserving it."
-else
-  TOP_MOUNT=/run/lyd-btrfs-top
-  mkdir -p "$TOP_MOUNT"
-  mount -t btrfs -o subvolid=5 "$ROOT_DEVICE" "$TOP_MOUNT"
-  cleanup() {
-    mountpoint -q "$TOP_MOUNT" && umount "$TOP_MOUNT"
-  }
-  trap cleanup EXIT
+TOP_MOUNT=/run/lyd-btrfs-top
+mkdir -p "$TOP_MOUNT"
+mount -t btrfs -o subvolid=5 "$ROOT_DEVICE" "$TOP_MOUNT"
+cleanup() { mountpoint -q "$TOP_MOUNT" && umount "$TOP_MOUNT"; }
+trap cleanup EXIT
 
-  if btrfs subvolume show "$TOP_MOUNT/@home" >/dev/null 2>&1; then
-    log "@home already exists; preserving it."
-  else
+# Separate /home and /var from the Snapper-managed root. Keeping /var outside
+# the root snapshots is important for booting read-only snapshots with GRUB.
+if ! awk '$1 !~ /^#/ && $2 == "/home" { found=1 } END { exit !found }' /etc/fstab; then
+  if ! btrfs subvolume show "$TOP_MOUNT/@home" >/dev/null 2>&1; then
     btrfs subvolume create "$TOP_MOUNT/@home"
-    if [[ -d /home ]]; then
-      cp -a /home/. "$TOP_MOUNT/@home/"
-    fi
-    log "Created @home and copied the installed /home contents."
+    cp -a /home/. "$TOP_MOUNT/@home/" 2>/dev/null || true
+    log "Created @home and copied existing home contents."
   fi
+fi
 
-  umount "$TOP_MOUNT"
-  trap - EXIT
+if ! awk '$1 !~ /^#/ && $2 == "/var" { found=1 } END { exit !found }' /etc/fstab; then
+  if ! btrfs subvolume show "$TOP_MOUNT/@var" >/dev/null 2>&1; then
+    btrfs subvolume create "$TOP_MOUNT/@var"
+    cp -a /var/. "$TOP_MOUNT/@var/"
+    log "Created @var and copied existing /var contents."
+  fi
+fi
 
-  ROOT_UUID="$(blkid -s UUID -o value "$ROOT_DEVICE")"
-  [[ -n "$ROOT_UUID" ]] || fail "Could not read the Btrfs filesystem UUID."
+umount "$TOP_MOUNT"
+trap - EXIT
 
-  python3 - "$ROOT_UUID" <<'PY'
+python3 - "$ROOT_UUID" <<'PY'
 from pathlib import Path
 import sys
 
@@ -55,6 +59,7 @@ path = Path("/etc/fstab")
 lines = path.read_text().splitlines()
 root_found = False
 home_found = False
+var_found = False
 updated = []
 
 for line in lines:
@@ -70,14 +75,17 @@ for line in lines:
         options = [x for x in fields[3].split(",")
                    if x not in {"atime", "relatime", "strictatime"}
                    and not x.startswith("compress=")]
-        if "noatime" not in options:
-            options.append("noatime")
-        options.append("compress=zstd:3")
+        for option in ("noatime", "compress=zstd:3"):
+            if option not in options:
+                options.append(option)
         fields[3] = ",".join(options)
         root_found = True
         updated.append("\t".join(fields))
     elif fields[1] == "/home":
         home_found = True
+        updated.append(line)
+    elif fields[1] == "/var":
+        var_found = True
         updated.append(line)
     else:
         updated.append(line)
@@ -85,36 +93,35 @@ for line in lines:
 if not root_found:
     raise SystemExit("Could not update Btrfs root mount options.")
 if not home_found:
-    updated.append(
-        f"UUID={uuid}\t/home\tbtrfs\tdefaults,noatime,compress=zstd:3,subvol=@home\t0\t0"
-    )
+    updated.append(f"UUID={uuid}\t/home\tbtrfs\tdefaults,noatime,compress=zstd:3,subvol=@home\t0\t0")
+if not var_found:
+    updated.append(f"UUID={uuid}\t/var\tbtrfs\tdefaults,noatime,compress=zstd:3,subvol=@var\t0\t0")
 path.write_text("\n".join(updated) + "\n")
 PY
-  log "Updated /etc/fstab with noatime, zstd compression and the @home subvolume."
-fi
 
-# Set up Snapper if it is present in the installed image. Keep the install
-# usable if Snapper needs manual attention; its status is recorded in the log.
-if command -v snapper >/dev/null 2>&1; then
-  if [[ ! -e /etc/snapper/configs/root ]]; then
-    if [[ -e /.snapshots ]] || mountpoint -q /.snapshots; then
-      log "Snapper not initialized: /.snapshots already exists; leaving it untouched."
-    else
-      snapper -c root create-config /
-      snapper -c root set-config \
-        TIMELINE_CREATE=yes TIMELINE_CLEANUP=yes NUMBER_CLEANUP=yes \
-        NUMBER_LIMIT=10 NUMBER_LIMIT_IMPORTANT=5 \
-        TIMELINE_LIMIT_HOURLY=10 TIMELINE_LIMIT_DAILY=7 \
-        TIMELINE_LIMIT_WEEKLY=4 TIMELINE_LIMIT_MONTHLY=6 \
-        TIMELINE_LIMIT_YEARLY=2
-      systemctl --root=/ enable snapper-timeline.timer snapper-cleanup.timer
-      log "Snapper root configuration and cleanup timers enabled."
-    fi
-  else
-    log "Existing Snapper root configuration found; preserving it."
-  fi
+mount -a
+findmnt --verify --verbose || fail "The generated fstab failed validation."
+log "Configured @home and @var subvolumes and validated /etc/fstab."
+
+# Initialize Snapper only after the root layout and writable /var mount exist.
+if [[ ! -e /etc/snapper/configs/root ]]; then
+  snapper -c root create-config /
+  snapper -c root set-config \
+    TIMELINE_CREATE=yes TIMELINE_CLEANUP=yes NUMBER_CLEANUP=yes \
+    NUMBER_LIMIT=10 NUMBER_LIMIT_IMPORTANT=5 \
+    TIMELINE_LIMIT_HOURLY=10 TIMELINE_LIMIT_DAILY=7 \
+    TIMELINE_LIMIT_WEEKLY=4 TIMELINE_LIMIT_MONTHLY=6 \
+    TIMELINE_LIMIT_YEARLY=2
+  log "Created the Snapper root configuration."
 else
-  log "Snapper package not found in target; run 'sudo lydsys run 5' after installation."
+  log "Existing Snapper root configuration found; preserving it."
 fi
 
-log "Btrfs post-install configuration finished."
+systemctl --root=/ enable snapper-timeline.timer snapper-cleanup.timer grub-btrfsd.service
+# Ensure there is at least one snapshot for the initial GRUB menu.
+if ! snapper -c root list --columns number | awk 'NR > 2 && $1 ~ /^[0-9]+$/ { found=1 } END { exit !found }'; then
+  snapper -c root create --description "Initial installation" --userdata "important=yes"
+fi
+update-grub
+log "Snapper timers and grub-btrfsd enabled; GRUB snapshot menu generated."
+log "Btrfs/Snapper/GRUB post-install configuration finished."
