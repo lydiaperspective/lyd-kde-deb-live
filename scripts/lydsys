@@ -6,7 +6,7 @@ VERSION="0.1.0"
 if [[ $EUID -ne 0 ]]; then
   case "${1:-}" in
     --help|-h|help)
-      printf 'lydsys %s\\nUsage: sudo lydsys | sudo lydsys list | sudo lydsys run NUMBER\\n' "$VERSION"
+      printf 'lydsys %s\nUsage: sudo lydsys | sudo lydsys list | sudo lydsys run NUMBER\n' "$VERSION"
       exit 0
       ;;
     *) exec sudo -- "$0" "$@" ;;
@@ -256,10 +256,10 @@ task_ark_storage() {
   done
   usermod -aG ark,video,render "$admin_user"
   info "Created the standard /ark directory layout:"
-  printf '  /ark/Containers  Compose projects and application data\\n'
-  printf '  /ark/Media       Media libraries\\n'
-  printf '  /ark/Share       NFS/Samba share content\\n'
-  printf '  /ark/Configs     User-managed service configuration\\n'
+  printf '  /ark/Containers  Compose projects and application data\n'
+  printf '  /ark/Media       Media libraries\n'
+  printf '  /ark/Share       NFS/Samba share content\n'
+  printf '  /ark/Configs     User-managed service configuration\n'
   info "Added $admin_user to ark, video and render groups."
   warn "Existing directory contents were not recursively chowned. Log out and back in for new group membership."
   warn "Podman's internal graph root is separate from /ark/Containers; this task does not move container storage."
@@ -338,15 +338,74 @@ EOF
 }
 
 main() {
-  case "${1:-}" in
+  case "\${1:-}" in
     --help|-h|help) show_help; return ;;
+    --version|-V) printf 'lydsys %s\n' "$VERSION"; return ;;
     list)
-      for n in "${!TASKS[@]}"; do printf '%2s  %s\n' "$n" "${TASKS[$n]}"; done | sort -n
+      for n in "\${!TASKS[@]}"; do printf '%2s  %s\n' "$n" "\${TASKS[$n]}"; done | sort -n
+      return
+      ;;
+    info)
+      printf 'System: %s\nKernel: %s\nArchitecture: %s\n' \
+        "$( . /etc/os-release; echo "\${PRETTY_NAME:-Debian}")" "$(uname -r)" "$(dpkg --print-architecture)"
+      printf 'Hostname: %s\nUptime: %s\n' "$(hostname)" "$(uptime -p 2>/dev/null || true)"
+      printf 'CPU: %s\n' "$(lscpu 2>/dev/null | awk -F: '/Model name/ {gsub(/^[ \t]+/, "", $2); print $2; exit}')"
+      printf 'Memory: '
+      free -h 2>/dev/null | awk '/^Mem:/ {print $2 " total, " $3 " used"}'
+      printf 'Root: '
+      findmnt -no SOURCE,FSTYPE,OPTIONS /
+      return
+      ;;
+    storage)
+      [[ $# -ge 2 ]] || die "Usage: lydsys storage {list|status}"
+      case "$2" in
+        list)
+          printf '%-16s %s\n' "Containers" "/ark/Containers"
+          printf '%-16s %s\n' "Media" "/ark/Media"
+          printf '%-16s %s\n' "Share" "/ark/Share"
+          printf '%-16s %s\n' "Configs" "/ark/Configs"
+          ;;
+        status)
+          for path in /ark /ark/Containers /ark/Media /ark/Share /ark/Configs; do
+            if [[ -e "$path" ]]; then
+              printf '%-20s ' "$path"
+              stat -c '%A %U:%G' "$path"
+              findmnt -T "$path" -no SOURCE,FSTYPE,TARGET 2>/dev/null || true
+            else
+              printf '%-20s %s\n' "$path" "not created"
+            fi
+          done
+          ;;
+        *) die "Usage: lydsys storage {list|status}" ;;
+      esac
+      return
+      ;;
+    config)
+      [[ $# -ge 2 ]] || die "Usage: lydsys config {path|show}"
+      case "$2" in
+        path) printf '%s\n' "/etc/lydsys/config.toml" ;;
+        show)
+          if [[ -f /etc/lydsys/config.toml ]]; then
+            cat /etc/lydsys/config.toml
+          else
+            cat <<'EOF'
+No user configuration file exists yet. Built-in storage defaults:
+  root       = /ark
+  containers = /ark/Containers
+  media      = /ark/Media
+  share      = /ark/Share
+  configs    = /ark/Configs
+
+These are current defaults, not yet user-editable storage migration settings.
+EOF
+          fi
+          ;;
+        *) die "Usage: lydsys config {path|show}" ;;
+      esac
       return
       ;;
     run)
       [[ $# -eq 2 ]] || die "Usage: lydsys run NUMBER"
-      need_root "$@"
       run_task "$2"
       return
       ;;
@@ -354,24 +413,23 @@ main() {
     *) die "Unknown argument. Use --help." ;;
   esac
 
-  need_root "$@"
   if ! have whiptail; then
     apt_install whiptail
   fi
   while true; do
     local choices=()
     for n in $(seq 1 16); do
-      choices+=("$n" "${TASKS[$n]}")
+      choices+=("$n" "\${TASKS[$n]}")
     done
     local choice
     choice="$(whiptail --title "lydsys $VERSION" --menu \
       "Select an optional system configuration task. Changes are logged to $LOG_FILE." \
-      25 92 17 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
+      25 92 17 "\${choices[@]}" 3>&1 1>&2 2>&3)" || break
     clear
     if run_task "$choice"; then
-      info "Task completed: ${TASKS[$choice]}"
+      info "Task completed: \${TASKS[$choice]}"
     else
-      warn "Task did not complete successfully: ${TASKS[$choice]}"
+      warn "Task did not complete successfully: \${TASKS[$choice]}"
     fi
     pause
   done
