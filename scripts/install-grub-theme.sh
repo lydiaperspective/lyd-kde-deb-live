@@ -35,14 +35,23 @@ dest() {
   if [[ "$ROOT" == "/" ]]; then printf '/%s' "$relative"; else printf '%s/%s' "$ROOT" "$relative"; fi
 }
 
-WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
-mkdir -p "$WORK/mystical"
-cp "$SOURCE" "$WORK/mystical/background.svg"
-rsvg-convert -w 1920 -h 1080 -o "$WORK/mystical/background.png" "$SOURCE"
-grub-mkfont --name="DejaVu Sans" --size=24 --output="$WORK/mystical/title.pf2" "$FONT"
-grub-mkfont --name="DejaVu Sans" --size=18 --output="$WORK/mystical/menu.pf2" "$FONT"
-cat > "$WORK/mystical/theme.txt" <<'THEME'
+SYSTEM_THEME="$(dest /usr/share/lyd/grub-theme/mystical)"
+if [[ "$ROOT" == "/" && -f "$SYSTEM_THEME/theme.txt" && -f "$SYSTEM_THEME/background.png" ]]; then
+  WORK=
+else
+  command -v rsvg-convert >/dev/null || { echo "Missing rsvg-convert (install librsvg2-bin)." >&2; exit 1; }
+  command -v grub-mkfont >/dev/null || { echo "Missing grub-mkfont (install grub-common)." >&2; exit 1; }
+  FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+  [[ -r "$FONT" ]] || { echo "Missing DejaVu Sans font (install fonts-dejavu-core)." >&2; exit 1; }
+
+  WORK="$(mktemp -d)"
+  trap 'rm -rf "$WORK"' EXIT
+  mkdir -p "$WORK/mystical"
+  cp "$SOURCE" "$WORK/mystical/background.svg"
+  rsvg-convert -w 1920 -h 1080 -o "$WORK/mystical/background.png" "$SOURCE"
+  grub-mkfont --name="DejaVu Sans" --size=24 --output="$WORK/mystical/title.pf2" "$FONT"
+  grub-mkfont --name="DejaVu Sans" --size=18 --output="$WORK/mystical/menu.pf2" "$FONT"
+  cat > "$WORK/mystical/theme.txt" <<'THEME'
 title-text: "LYD DEBIAN"
 title-font: "DejaVu Sans Regular 24"
 title-color: "#F4DEA0"
@@ -67,9 +76,9 @@ terminal-height: "100%"
 }
 THEME
 
-SYSTEM_THEME="$(dest /usr/share/lyd/grub-theme/mystical)"
-install -d "$SYSTEM_THEME"
-install -m 0644 "$WORK/mystical/"* "$SYSTEM_THEME/"
+  install -d "$SYSTEM_THEME"
+  install -m 0644 "$WORK/mystical/"* "$SYSTEM_THEME/"
+fi
 install -d "$(dest /usr/local/lib/lyd)"
 INSTALLER_TARGET="$(dest /usr/local/lib/lyd/install-grub-theme.sh)"
 SELF="$(realpath -m "$SCRIPT_DIR/$(basename -- "$0")")"
@@ -78,6 +87,7 @@ if [[ "$SELF" != "$(realpath -m "$INSTALLER_TARGET")" ]]; then
 fi
 
 if [[ -n "$ISO_OUTPUT" ]]; then
+  [[ -n "$WORK" ]] || { echo "ISO output requires build-time theme generation." >&2; exit 1; }
   ISO_OUTPUT="$(realpath -m "$ISO_OUTPUT")"
   install -d "$ISO_OUTPUT/lyd-mystical"
   install -m 0644 "$WORK/mystical/"* "$ISO_OUTPUT/lyd-mystical/"
