@@ -233,6 +233,20 @@ task_intel_vaapi() {
   info "For applications that need an explicit driver, use LIBVA_DRIVER_NAME=i965."
 }
 
+task_woman() {
+  apt_install man-db
+  if [[ -e /usr/local/bin/woman ]]; then
+    warn "/usr/local/bin/woman already exists; preserving it."
+    return 0
+  fi
+  cat > /usr/local/bin/woman <<'EOF'
+#!/bin/sh
+exec man "$@"
+EOF
+  chmod 0755 /usr/local/bin/woman
+  info "The woman command now opens man pages."
+}
+
 task_auto_updates() {
   apt_install unattended-upgrades apt-listchanges
   dpkg-reconfigure -f noninteractive unattended-upgrades || true
@@ -295,6 +309,7 @@ declare -A TASKS=(
   [14]="Enable automatic APT updates"
   [15]="Remove KDE and convert to headless server"
   [16]="Set up Ark-style /ark storage and GPU groups"
+  [17]="Add woman command as a man alias"
 )
 
 run_task() {
@@ -315,6 +330,7 @@ run_task() {
     14) task_auto_updates ;;
     15) task_headless ;;
     16) task_ark_storage ;;
+    17) task_woman ;;
     *) die "Unknown task: $1" ;;
   esac
 }
@@ -418,13 +434,13 @@ EOF
   fi
   while true; do
     local choices=()
-    for n in $(seq 1 16); do
+    for n in $(seq 1 17); do
       choices+=("$n" "${TASKS[$n]}")
     done
     local choice
     choice="$(whiptail --title "lydsys $VERSION" --menu \
       "Select an optional system configuration task. Changes are logged to $LOG_FILE." \
-      25 92 17 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
+      26 96 18 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
     clear
     if run_task "$choice"; then
       info "Task completed: ${TASKS[$choice]}"
