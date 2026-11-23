@@ -1,5 +1,5 @@
-# Desktop environment
-task-kde-desktop
+# Minimal KDE Plasma desktop (avoids Debian's broad task-kde-desktop recommendations)
+kde-plasma-desktop
 # Desktop entry for launching Debian Installer from the live KDE session
 debian-installer-launcher
 sddm
