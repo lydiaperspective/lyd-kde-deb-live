@@ -5,7 +5,7 @@ A Debian 13 (Trixie) Live Build project for two installable amd64 images:
 - **Desktop** — KDE Plasma workstation image.
 - **Server** — headless/server image with SSH, Podman and administration tools.
 
-Both images include **lydsys**, an interactive system configuration utility. The project uses Debian's official repositories; it is a Debian derivative configuration, not a fork of Debian's package archive.
+Both images include **lydsys**, an interactive system configuration utility, and **lydsetup**, a separate interactive post-install setup manager. The project uses Debian's official repositories; it is a Debian derivative configuration, not a fork of Debian's package archive.
 
 ## Status
 
@@ -41,7 +41,7 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 - Debian 13 Trixie, amd64
 - KDE Plasma desktop task and SDDM
 - Firefox ESR, NetworkManager, firmware, Flatpak and Discover Flatpak support
-- Common utilities, gaming tools and virtualization packages
+- Common utilities; optional gaming performance and virtualization components can be added later with `lydsetup`
 - The **Mystical** KDE Global Theme: midnight-plum colour scheme, Plasma panel/widget style, moonlit wallpaper, animated Plasma splash, Breeze-compatible GTK integration, and original lunar/botanical artwork
 - `lydsys` and the `lydhelp` command-line reference
 
@@ -52,9 +52,9 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 - `lydsys`
 - The same guided UEFI/GPT Btrfs installation layout and post-install `@home`/Snapper setup as the desktop image
 
-### lydsys
+### lydsys and lydsetup
 
-Run `sudo lydsys` after installation. The `lydhelp` command is included by default and provides topic-based terminal help for files, folders, search, permissions, storage, processes, networking, packages and archives. It offers optional configuration tasks for system updates, KDE workstation tools, gaming, Btrfs mount options, Snapper, Flatpak, Podman, TuneD, Cockpit, SSH, Tailscale, virtualization, legacy Intel VA-API, automatic APT updates, removing KDE to make a desktop install headless, creating the Ark-style `/ark` storage layout with `ark`, `video` and `render` group membership, adding the optional `woman` alias for `man`, and applying the Mystical KDE Global Theme. Read-only commands include `lydsys info`, `lydsys storage list`, and `lydsys storage status`. The `/ark` layout uses `Containers`, `Media`, `Share`, and `Configs`; it does not relocate Podman's graph root or migrate existing data.
+Run `sudo lydsys` after installation for system configuration tasks. Run `lydsetup` as your regular user for the guided post-install component selector. `lydsetup` offers optional tasks for KDE utilities, gaming performance tools (GameMode, MangoHud, vkBasalt and Vulkan utilities), QEMU/KVM virtualization with virt-manager, Flatpak/Flathub, Podman, TuneD, Cockpit, SSH, Tailscale, NVIDIA drivers, Btrfs/Snapper and headless conversion. It records timestamped logs under `~/.config/lydsetup/profiles/`. The gaming task does not install a game store or configure third-party repositories. `lydsys` remains the lower-level system configuration utility. The `lydhelp` command is included by default and provides topic-based terminal help for files, folders, search, permissions, storage, processes, networking, packages and archives. It offers optional configuration tasks for system updates, KDE workstation tools, gaming, Btrfs mount options, Snapper, Flatpak, Podman, TuneD, Cockpit, SSH, Tailscale, virtualization, legacy Intel VA-API, automatic APT updates, removing KDE to make a desktop install headless, creating the Ark-style `/ark` storage layout with `ark`, `video` and `render` group membership, adding the optional `woman` alias for `man`, and applying the Mystical KDE Global Theme. Read-only commands include `lydsys info`, `lydsys storage list`, and `lydsys storage status`. The `/ark` layout uses `Containers`, `Media`, `Share`, and `Configs`; it does not relocate Podman's graph root or migrate existing data.
 
 The Mystical theme is copied from the Lyd Ark Themes project into this repository under `themes/mystical/`. It is installed in the desktop image as a KDE Plasma 6 Global Theme, standalone colour scheme, Plasma Style, wallpaper package, and Plasma splash package. The installer also preserves the original illustrated moon, triple-moon, crystal, lavender, sage, and pentacle SVG assets. System XDG defaults select the Mystical colour scheme and Plasma Style for new desktop users while retaining Breeze's application widget style, icon theme, cursor, and window-decoration implementation for compatibility. GTK integration uses Debian's Breeze GTK theme and KDE GTK configuration module so GTK applications remain visually coordinated. Existing users can apply the full package from System Settings → Appearance → Global Theme or with `sudo lydsys run 18`. The SVG artwork pack is not represented as a complete application icon theme, and custom cursor artwork / a custom SDDM login theme are not included yet.
 
@@ -80,7 +80,8 @@ profiles/server/         server image configuration and package list
 themes/mystical/         copied Ark theme source and KDE Plasma components
 scripts/build-iso.sh     local profile builder
 scripts/install-mystical-theme.sh  stages Mystical into the desktop image
-scripts/lydsys           installed configuration utility
+scripts/lydsys           Debian-specific system configuration utility
+scripts/lydsetup         interactive post-install setup manager
 ```
 
 ## License
