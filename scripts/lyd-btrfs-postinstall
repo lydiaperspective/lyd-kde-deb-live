@@ -68,10 +68,11 @@ for line in lines:
         continue
     if fields[1] == "/" and fields[2] == "btrfs":
         options = [x for x in fields[3].split(",")
-                   if x not in {"atime", "relatime", "strictatime"}]
-        for option in ("noatime", "compress=zstd:3"):
-            if option.split("=")[0] not in {x.split("=")[0] for x in options}:
-                options.append(option)
+                   if x not in {"atime", "relatime", "strictatime"}
+                   and not x.startswith("compress=")]
+        if "noatime" not in options:
+            options.append("noatime")
+        options.append("compress=zstd:3")
         fields[3] = ",".join(options)
         root_found = True
         updated.append("\t".join(fields))
