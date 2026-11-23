@@ -34,7 +34,7 @@ trap cleanup EXIT
 if ! awk '$1 !~ /^#/ && $2 == "/home" { found=1 } END { exit !found }' /etc/fstab; then
   if ! btrfs subvolume show "$TOP_MOUNT/@home" >/dev/null 2>&1; then
     btrfs subvolume create "$TOP_MOUNT/@home"
-    cp -a /home/. "$TOP_MOUNT/@home/" 2>/dev/null || true
+    cp -a /home/. "$TOP_MOUNT/@home/"
     log "Created @home and copied existing home contents."
   fi
 fi
@@ -119,7 +119,7 @@ fi
 
 systemctl --root=/ enable snapper-timeline.timer snapper-cleanup.timer grub-btrfsd.service
 # Ensure there is at least one snapshot for the initial GRUB menu.
-if ! snapper -c root list --columns number | awk 'NR > 2 && $1 ~ /^[0-9]+$/ { found=1 } END { exit !found }'; then
+if ! find /.snapshots -mindepth 2 -maxdepth 2 -type d -name snapshot -print -quit | grep -q .; then
   snapper -c root create --description "Initial installation" --userdata "important=yes"
 fi
 update-grub
