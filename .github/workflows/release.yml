@@ -31,7 +31,7 @@ jobs:
 
       - name: Fix live-build firmware index lookup
         run: |
-          bash scripts/patch-live-build-firmware-index.sh
+          sudo bash scripts/patch-live-build-firmware-index.sh
 
       - name: Prepare lydsys include
         run: |
