@@ -35,7 +35,9 @@ The generated ISO is placed in the selected profile directory. Builds require ro
 
 The workflow in `.github/workflows/build-iso.yml` runs on pushes to `main`, pull requests, a weekly schedule, and manual dispatch. It builds both profiles and uploads the ISO plus SHA256 checksum as workflow artifacts.
 
-Push a tag such as `v0.1.0` to create a GitHub Release containing both images. Repository Actions permissions must allow write access for release publishing.
+The release workflow also builds both profiles on every push to `main` and publishes them to a rolling **Latest build** prerelease at [Releases → latest](https://github.com/lydiaperspective/lyd-kde-deb-live/releases/tag/latest). Each successful main-branch build replaces the previous ISO assets and updates the `latest` tag to that commit. Download `lyd-debian-desktop-amd64.iso` or `lyd-debian-server-amd64.iso`; the matching `.sha256` files are published alongside them. These are development builds and may change with every successful push.
+
+For a stable, versioned release, push a tag such as `v0.1.0`; this creates a separate permanent GitHub Release containing both images. Repository Actions permissions must allow write access for release publishing.
 
 ## Image contents
 
