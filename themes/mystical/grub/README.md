@@ -8,6 +8,6 @@ The installed-system helper copies the generated assets to
 `/boot/grub/themes/lyd-mystical`, updates `/etc/default/grub`, and runs
 `update-grub`. It keeps a timestamped backup of the previous GRUB defaults.
 
-The live ISO uses the theme in its UEFI GRUB menu. The legacy BIOS boot menu
+The desktop live ISO uses the theme in its UEFI GRUB menu. The legacy BIOS boot menu
 continues to use the live-build Syslinux/ISOLINUX menu; this is a live-build ISO
 boot-path limitation and does not affect GRUB installed on the target system.
