@@ -1,0 +1,52 @@
+name: Publish Debian Live Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [desktop, server]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install live-build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            live-build debootstrap squashfs-tools xorriso \
+            isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin \
+            mtools dosfstools rsync
+
+      - name: Prepare lydsys include
+        run: |
+          install -D -m 0755 scripts/lydsys \
+            "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lydsys"
+
+      - name: Build ISO
+        working-directory: profiles/${{ matrix.profile }}
+        run: |
+          sudo lb clean --purge
+          sudo lb config
+          sudo lb build
+          ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)"
+          test -n "$ISO"
+          sha256sum "$ISO" > "$ISO.sha256"
+
+      - name: Upload ISO and checksum
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            profiles/${{ matrix.profile }}/*.iso
+            profiles/${{ matrix.profile }}/*.iso.sha256
+          fail_on_unmatched_files: true
