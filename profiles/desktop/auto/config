@@ -5,6 +5,8 @@ set -eu
 # directly when looking up Contents-amd64.gz; a trailing slash creates a // path
 # that some Debian CDN edges return as 404.
 lb config noauto \
+  --ignore-system-defaults \
+  --initsystem systemd \
   --mode debian \
   --distribution trixie \
   --architecture amd64 \
