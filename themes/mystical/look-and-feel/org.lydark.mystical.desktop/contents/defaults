@@ -1,0 +1,9 @@
+[kdeglobals][General]
+ColorScheme=Mystical
+AccentColor=152,116,196
+
+[ksplashrc][KSplash]
+Theme=org.lydark.mystical.desktop
+
+[plasmarc][Theme]
+name=org.kde.breeze.desktop
