@@ -64,3 +64,4 @@ podman
 podman-compose
 btrfs-progs
 snapper
+inotify-tools
