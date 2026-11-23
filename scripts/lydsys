@@ -1,0 +1,339 @@
+#!/usr/bin/env bash
+# lydsys - optional configuration utility for lyd Debian Live installations.
+set -Eeuo pipefail
+
+VERSION="0.1.0"
+LOG_DIR="/var/log/lydsys"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/lydsys-$(date +%F).log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+info() { printf '\n[lydsys] %s\n' "$*"; }
+warn() { printf '\n[warning] %s\n' "$*" >&2; }
+die() { printf '\n[error] %s\n' "$*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+pause() { read -r -p 'Press Enter to continue...' _ || true; }
+confirm() {
+  local answer
+  read -r -p "$1 [y/N] " answer
+  [[ "$answer" =~ ^([yY]|[yY][eE][sS])$ ]]
+}
+need_root() {
+  if [[ $EUID -ne 0 ]]; then
+    exec sudo -- "$0" "$@"
+  fi
+}
+apt_install() {
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update
+  apt-get install -y "$@"
+}
+enable_service() {
+  systemctl enable --now "$1"
+}
+
+task_update() {
+  info "Updating installed Debian packages"
+  apt-get update
+  apt-get full-upgrade -y
+  apt-get autoremove --purge -y
+}
+
+task_desktop_tools() {
+  apt_install kde-config-sddm plasma-discover plasma-discover-backend-flatpak \
+    dolphin konsole kate okular spectacle ark firefox-esr
+}
+
+task_gaming() {
+  apt_install gamemode mangohud vkbasalt mesa-vulkan-drivers mesa-va-drivers \
+    vulkan-tools
+  mkdir -p /etc/MangoHud
+  if [[ ! -e /etc/MangoHud/MangoHud.conf ]]; then
+    cat > /etc/MangoHud/MangoHud.conf <<'EOF'
+legacy_layout=false
+fps
+frametime
+gpu_stats
+gpu_temp
+cpu_stats
+cpu_temp
+ram
+vram
+position=top-left
+EOF
+  fi
+  info "Gaming tools installed. Steam can be installed separately if desired."
+}
+
+task_btrfs_tweaks() {
+  local fstab="/etc/fstab" backup
+  [[ -r "$fstab" ]] || die "/etc/fstab not found"
+  [[ "$(findmnt -n -o FSTYPE /)" == "btrfs" ]] || {
+    warn "The root filesystem is not Btrfs; no changes made."
+    return 1
+  }
+  backup="${fstab}.lydsys-backup-$(date +%Y%m%d-%H%M%S)"
+  cp -a "$fstab" "$backup"
+  python3 - "$fstab" <<'PY'
+import pathlib, sys
+path = pathlib.Path(sys.argv[1])
+lines = path.read_text().splitlines()
+changed = False
+for i, line in enumerate(lines):
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        continue
+    fields = line.split()
+    if len(fields) < 4 or fields[1] != "/" or fields[2] != "btrfs":
+        continue
+    opts = fields[3].split(",")
+    opts = [x for x in opts if x not in ("atime", "relatime", "strictatime")]
+    if "noatime" not in opts:
+        opts.append("noatime")
+    if not any(x.startswith("compress=") for x in opts):
+        opts.append("compress=zstd:3")
+    fields[3] = ",".join(opts)
+    lines[i] = "\t".join(fields)
+    changed = True
+    break
+if not changed:
+    raise SystemExit("No Btrfs root entry found in /etc/fstab; left unchanged.")
+path.write_text("\n".join(lines) + "\n")
+PY
+  if ! mount -o remount /; then
+    cp -a "$backup" "$fstab"
+    die "Remount failed; restored the original fstab."
+  fi
+  info "Btrfs root options updated. Backup: $backup"
+  findmnt -no SOURCE,FSTYPE,OPTIONS /
+}
+
+task_snapper() {
+  [[ "$(findmnt -n -o FSTYPE /)" == "btrfs" ]] || {
+    warn "Snapper root configuration requires Btrfs."
+    return 1
+  }
+  btrfs subvolume show / >/dev/null 2>&1 || {
+    warn "The root mount is not a Btrfs subvolume. Inspect the layout first."
+    return 1
+  }
+  apt_install snapper btrfs-progs
+  if [[ ! -e /etc/snapper/configs/root ]]; then
+    if [[ -e /.snapshots ]] || mountpoint -q /.snapshots; then
+      warn "/.snapshots already exists or is mounted. Refusing to overwrite an unknown layout."
+      return 1
+    fi
+    snapper -c root create-config /
+  else
+    info "Existing Snapper root configuration found; preserving it."
+  fi
+  snapper -c root set-config \
+    TIMELINE_CREATE=yes TIMELINE_CLEANUP=yes NUMBER_CLEANUP=yes \
+    NUMBER_LIMIT=10 NUMBER_LIMIT_IMPORTANT=5 \
+    TIMELINE_LIMIT_HOURLY=10 TIMELINE_LIMIT_DAILY=7 \
+    TIMELINE_LIMIT_WEEKLY=4 TIMELINE_LIMIT_MONTHLY=6 \
+    TIMELINE_LIMIT_YEARLY=2
+  systemctl enable --now snapper-timeline.timer snapper-cleanup.timer
+  info "Snapper configured. Snapshots are not backups."
+}
+
+task_flatpak() {
+  apt_install flatpak plasma-discover-backend-flatpak
+  if ! flatpak remote-list --system | grep -q '^flathub'; then
+    flatpak remote-add --system --if-not-exists flathub \
+      https://dl.flathub.org/repo/flathub.flatpakrepo
+  fi
+  info "Flatpak and Flathub configured."
+}
+
+task_podman() {
+  apt_install podman podman-compose uidmap slirp4netns fuse-overlayfs
+  info "Podman installed. Rootless use requires a regular user with subuid/subgid ranges."
+}
+
+task_tuned() {
+  apt_install tuned tuned-ppd
+  enable_service tuned.service
+}
+
+task_cockpit() {
+  apt_install cockpit
+  enable_service cockpit.socket
+  info "Cockpit is normally available at https://HOSTNAME:9090"
+}
+
+task_ssh() {
+  apt_install openssh-server
+  enable_service ssh.service
+}
+
+task_tailscale() {
+  if ! have curl; then apt_install curl; fi
+  if ! confirm "Install Tailscale using its official Debian installation repository?"; then
+    return 0
+  fi
+  curl -fsSL https://tailscale.com/install.sh | sh
+  info "Tailscale installed. Authenticate with: sudo tailscale up"
+}
+
+task_virtualization() {
+  apt_install qemu-system-x86 qemu-utils libvirt-daemon-system \
+    libvirt-clients virt-manager ovmf
+  enable_service libvirtd.service
+  info "Add your desktop user to the libvirt and kvm groups, then sign out and back in."
+}
+
+ensure_nonfree_components() {
+  python3 <<'PY'
+from pathlib import Path
+import re
+paths = [Path("/etc/apt/sources.list"), *Path("/etc/apt/sources.list.d").glob("*.sources")]
+for path in paths:
+    if not path.exists():
+        continue
+    text = path.read_text()
+    if path.suffix == ".sources":
+        def update(m):
+            value = m.group(1)
+            extras = ["contrib", "non-free", "non-free-firmware"]
+            for item in extras:
+                if item not in value.split():
+                    value += " " + item
+            return "Components: " + value
+        text = re.sub(r"(?m)^Components:\s*(.+)$", update, text)
+    else:
+        def update_line(m):
+            value = m.group(1)
+            extras = ["contrib", "non-free", "non-free-firmware"]
+            for item in extras:
+                if item not in value.split():
+                    value += " " + item
+            return m.group(0).replace(m.group(1), value)
+        text = re.sub(r"(?m)^(\s*deb\s+(?:\[[^]]+\]\s+)?\S+\s+\S+\s+)([^#\n]+)", lambda m: m.group(1) + " ".join(dict.fromkeys((m.group(2).split() + ["contrib", "non-free", "non-free-firmware"]))), text)
+    path.write_text(text)
+PY
+}
+
+task_intel_vaapi() {
+  info "This option targets older Intel graphics such as Ivy Bridge HD 4000 (i7-3770S)."
+  info "The legacy i965 VA-API driver supports Ivy Bridge; encoding availability varies by codec."
+  ensure_nonfree_components
+  apt_install i965-va-driver i965-va-driver-shaders vainfo ffmpeg
+  info "Installed legacy Intel VA-API packages."
+  info "Check the device with: vainfo"
+  info "For applications that need an explicit driver, use LIBVA_DRIVER_NAME=i965."
+}
+
+task_auto_updates() {
+  apt_install unattended-upgrades apt-listchanges
+  dpkg-reconfigure -f noninteractive unattended-upgrades || true
+  systemctl enable --now apt-daily.timer apt-daily-upgrade.timer
+  info "Debian unattended security updates configured using the package defaults."
+}
+
+task_headless() {
+  if ! dpkg-query -W -f='${Status}' task-kde-desktop 2>/dev/null | grep -q 'install ok installed'; then
+    warn "KDE task package not detected. No desktop removal performed."
+    return 1
+  fi
+  warn "This removes KDE Plasma and SDDM from this installation."
+  confirm "Continue with headless conversion?" || return 0
+  apt-get purge -y task-kde-desktop kde-plasma-desktop plasma-desktop sddm
+  apt-get autoremove --purge -y
+  systemctl set-default multi-user.target
+  info "Desktop packages removed. Reboot when ready."
+}
+
+declare -A TASKS=(
+  [1]="Update and upgrade Debian"
+  [2]="Install KDE desktop tools"
+  [3]="Install gaming tools"
+  [4]="Configure Btrfs mount options"
+  [5]="Configure Snapper snapshots"
+  [6]="Install Flatpak and Flathub"
+  [7]="Install Podman"
+  [8]="Install TuneD"
+  [9]="Install Cockpit"
+  [10]="Install and enable SSH"
+  [11]="Install Tailscale"
+  [12]="Install virtualization tools"
+  [13]="Install legacy Intel VA-API driver (Ivy Bridge)"
+  [14]="Enable automatic APT updates"
+  [15]="Remove KDE and convert to headless server"
+)
+
+run_task() {
+  case "$1" in
+    1) task_update ;;
+    2) task_desktop_tools ;;
+    3) task_gaming ;;
+    4) task_btrfs_tweaks ;;
+    5) task_snapper ;;
+    6) task_flatpak ;;
+    7) task_podman ;;
+    8) task_tuned ;;
+    9) task_cockpit ;;
+    10) task_ssh ;;
+    11) task_tailscale ;;
+    12) task_virtualization ;;
+    13) task_intel_vaapi ;;
+    14) task_auto_updates ;;
+    15) task_headless ;;
+    *) die "Unknown task: $1" ;;
+  esac
+}
+
+show_help() {
+  cat <<EOF
+lydsys $VERSION
+Usage:
+  sudo lydsys             Open the interactive menu
+  sudo lydsys list        List available task numbers
+  sudo lydsys run NUMBER  Run one task by number
+  lydsys --help           Show this help
+
+Logs: $LOG_DIR
+EOF
+}
+
+main() {
+  case "${1:-}" in
+    --help|-h|help) show_help; return ;;
+    list)
+      for n in "${!TASKS[@]}"; do printf '%2s  %s\n' "$n" "${TASKS[$n]}"; done | sort -n
+      return
+      ;;
+    run)
+      [[ $# -eq 2 ]] || die "Usage: lydsys run NUMBER"
+      need_root "$@"
+      run_task "$2"
+      return
+      ;;
+    "") ;;
+    *) die "Unknown argument. Use --help." ;;
+  esac
+
+  need_root "$@"
+  if ! have whiptail; then
+    apt_install whiptail
+  fi
+  while true; do
+    local choices=()
+    for n in $(seq 1 15); do
+      choices+=("$n" "${TASKS[$n]}")
+    done
+    local choice
+    choice="$(whiptail --title "lydsys $VERSION" --menu \
+      "Select an optional system configuration task. Changes are logged to $LOG_FILE." \
+      24 88 16 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
+    clear
+    if run_task "$choice"; then
+      info "Task completed: ${TASKS[$choice]}"
+    else
+      warn "Task did not complete successfully: ${TASKS[$choice]}"
+    fi
+    pause
+  done
+}
+
+main "$@"
