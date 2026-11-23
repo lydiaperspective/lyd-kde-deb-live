@@ -30,12 +30,12 @@ dest() {
 if [[ "$RESTORE" == "1" ]]; then
   [[ "$ROOT" == "/" ]] || { echo "--restore can only be used on the running system." >&2; exit 2; }
   [[ -x /usr/sbin/update-grub ]] || { echo "update-grub is unavailable." >&2; exit 1; }
-  BACKUP="$(find /etc/default -maxdepth 1 -type f -name 'grub.lyd-backup-*' -printf '%f\\n' | sort | tail -n1)"
+  BACKUP="$(find /etc/default -maxdepth 1 -type f -name 'grub.lyd-backup-*' -print | sort | tail -n1)"
   [[ -n "$BACKUP" ]] || { echo "No lyd GRUB backup was found in /etc/default." >&2; exit 1; }
-  cp -a "/etc/default/$BACKUP" /etc/default/grub
+  cp -a "$BACKUP" /etc/default/grub
   rm -rf /boot/grub/themes/lyd-mystical
   update-grub
-  echo "Restored /etc/default/grub from /etc/default/$BACKUP."
+  echo "Restored /etc/default/grub from $BACKUP."
   exit 0
 fi
 
