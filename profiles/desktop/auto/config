@@ -11,7 +11,6 @@ lb config noauto \
   --archive-areas "main contrib non-free non-free-firmware" \
   --apt-recommends true \
   --apt-secure true \
-  --updates true \
   --security true \
   --firmware-binary true \
   --firmware-chroot true \
