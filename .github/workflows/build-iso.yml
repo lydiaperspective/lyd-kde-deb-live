@@ -43,11 +43,14 @@ jobs:
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lydsys"
           install -D -m 0755 scripts/lydhelp \
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/bin/lydhelp"
+          install -D -m 0755 scripts/lyd-btrfs-postinstall \
+            "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lyd-btrfs-postinstall"
 
       - name: Validate shell scripts
         run: |
           bash -n scripts/lydsys
           bash -n scripts/lydhelp
+          bash -n scripts/lyd-btrfs-postinstall
           bash -n scripts/build-iso.sh
           sh -n profiles/desktop/auto/config
           sh -n profiles/server/auto/config
