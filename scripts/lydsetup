@@ -5,7 +5,7 @@ set -Eeuo pipefail
 APP_NAME="lydsetup"
 VERSION="0.1.0"
 CONFIG_DIR="$HOME/.config/lydsetup"
-PROFILE_DIR="$CONFIG_DIR/profiles"
+PROFILE_DIR="$CONFIG_DIR/logs"
 mkdir -p "$PROFILE_DIR"
 LOG_FILE="$PROFILE_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
 declare -a SELECTED=()
