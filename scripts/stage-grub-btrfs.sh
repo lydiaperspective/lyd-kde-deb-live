@@ -8,17 +8,20 @@ command -v make >/dev/null || { echo "make is required to stage grub-btrfs." >&2
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 git clone --depth 1 --branch v4.14 https://github.com/Antynea/grub-btrfs.git "$WORK/grub-btrfs"
-# Debian 13 can return an empty parsed subvolume UUID on some Btrfs layouts.
-# Fall back to the filesystem UUID rather than aborting snapshot menu generation.
+# Parse Btrfs subvolume UUID fields robustly; upstream v4.14 expected leading
+# whitespace before UUID, while Debian's btrfs-progs prints the label at column 1.
 python3 - "$WORK/grub-btrfs/41_snapshots-btrfs" <<'PY'
 from pathlib import Path
 import sys
 p = Path(sys.argv[1])
 s = p.read_text()
-old = 'root_uuid_subvolume=$(awk -F":" \'match($1, /(^[ \\t]+UUID)/) {sub(/^[ \\t]+/, "", $2); print $2}\' <<< "$root_uuid_subvolume")'
-new = old + '\n[ -n "$root_uuid_subvolume" ] || root_uuid_subvolume="$root_uuid"'
-if old not in s:
-    raise SystemExit("Could not apply Debian 13 root UUID compatibility patch to grub-btrfs.")
-p.write_text(s.replace(old, new, 1))
+old_root = 'root_uuid_subvolume=$(awk -F":" \'match($1, /(^[ \\t]+UUID)/) {sub(/^[ \\t]+/, "", $2); print $2}\' <<< "$root_uuid_subvolume")'
+new_root = 'root_uuid_subvolume=$(awk -F":" \'/^[[:space:]]*UUID[[:space:]]*:/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}\' <<< "$root_uuid_subvolume")'
+old_boot = 'boot_uuid_subvolume=$(awk -F":" \'match($1, /(^[ \\t]+UUID)/) {sub(/^[ \\t]+/, "", $2); print $2}\' <<< "$boot_uuid_subvolume")'
+new_boot = 'boot_uuid_subvolume=$(awk -F":" \'/^[[:space:]]*UUID[[:space:]]*:/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2; exit}\' <<< "$boot_uuid_subvolume")'
+if old_root not in s or old_boot not in s:
+    raise SystemExit("Could not apply Debian Btrfs UUID parsing compatibility patch.")
+s = s.replace(old_root, new_root, 1).replace(old_boot, new_boot, 1)
+p.write_text(s)
 PY
 make -C "$WORK/grub-btrfs" DESTDIR="$ROOT" PREFIX=/usr SYSTEMD=true GRUB_UPDATE_EXCLUDE=true install
