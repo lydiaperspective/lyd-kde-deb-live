@@ -9,7 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  build:
+    name: Build ${{ matrix.profile }} release ISO
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -43,10 +44,32 @@ jobs:
           test -n "$ISO"
           sha256sum "$ISO" > "$ISO.sha256"
 
-      - name: Upload ISO and checksum
-        uses: softprops/action-gh-release@v2
+      - name: Upload release build artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: ${{ matrix.profile }}-iso
+          path: |
             profiles/${{ matrix.profile }}/*.iso
             profiles/${{ matrix.profile }}/*.iso.sha256
-          fail_on_unmatched_files: true
+          if-no-files-found: error
+          retention-days: 3
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download both ISO artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" release-assets/* \
+            --title "lyd Debian Live $TAG" \
+            --generate-notes
