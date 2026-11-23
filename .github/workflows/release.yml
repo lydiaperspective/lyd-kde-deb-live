@@ -25,7 +25,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates live-build debootstrap squashfs-tools xorriso \
+            git ca-certificates make live-build debootstrap squashfs-tools xorriso \
             isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin \
             mtools dosfstools rsync grub-common librsvg2-bin fonts-dejavu-core
 
@@ -42,6 +42,7 @@ jobs:
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/bin/lydsetup"
           install -D -m 0755 scripts/lyd-btrfs-postinstall \
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lyd-btrfs-postinstall"
+          bash scripts/stage-grub-btrfs.sh "profiles/${{ matrix.profile }}/config/includes.chroot"
           if [ "${{ matrix.profile }}" = "desktop" ]; then
             bash scripts/install-grub-theme.sh \
               --root "profiles/desktop/config/includes.chroot" \
@@ -64,6 +65,7 @@ jobs:
           bash -n scripts/lydsetup
           bash -n scripts/lydhelp
           bash -n scripts/lyd-btrfs-postinstall
+          bash -n scripts/stage-grub-btrfs.sh
           bash -n scripts/install-mystical-theme.sh
           bash -n scripts/install-grub-theme.sh
           sh -n scripts/9999-grub-theme.hook.binary
