@@ -2,7 +2,7 @@
 # lydsys - optional configuration utility for lyd Debian Live installations.
 set -Eeuo pipefail
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 if [[ $EUID -ne 0 ]]; then
   case "${1:-}" in
     --help|-h|help)
@@ -51,6 +51,45 @@ task_update() {
 task_desktop_tools() {
   apt_install kde-config-sddm plasma-discover plasma-discover-backend-flatpak \
     dolphin konsole kate okular spectacle ark firefox-esr
+}
+
+
+task_mystical_theme() {
+  have lookandfeeltool || {
+    warn "KDE Plasma tools are not installed. This option is for the desktop profile."
+    return 1
+  }
+  [[ -d /usr/share/plasma/look-and-feel/org.lydark.mystical.desktop ]] || {
+    warn "The Mystical theme package is not installed on this system."
+    return 1
+  }
+
+  local target_user="${SUDO_USER:-}" target_home
+  if [[ -z "$target_user" || "$target_user" == "root" ]]; then
+    read -r -p "Linux desktop account to apply Mystical to: " target_user
+  fi
+  id "$target_user" >/dev/null 2>&1 || die "User '$target_user' does not exist."
+  target_home="$(getent passwd "$target_user" | cut -d: -f6)"
+  [[ -n "$target_home" && -d "$target_home" ]] || die "Could not locate the home directory for $target_user."
+
+  if runuser -u "$target_user" -- env HOME="$target_home" \
+      lookandfeeltool -a org.lydark.mystical.desktop; then
+    info "Applied the Mystical global theme for $target_user."
+  else
+    warn "The global-theme helper could not apply the package in this shell context."
+    if have kwriteconfig6; then
+      kwriteconfig6 --file "$target_home/.config/kdeglobals" --group General --key ColorScheme Mystical
+      kwriteconfig6 --file "$target_home/.config/plasmarc" --group Theme --key name org.lydark.mystical.desktop
+      kwriteconfig6 --file "$target_home/.config/ksplashrc" --group KSplash --key Theme org.lydark.mystical.desktop
+      chown "$target_user":"$(id -gn "$target_user")" \
+        "$target_home/.config/kdeglobals" "$target_home/.config/plasmarc" "$target_home/.config/ksplashrc"
+      info "Updated the user's KDE theme settings. Sign out and back in to refresh Plasma."
+    else
+      return 1
+    fi
+  fi
+  info "Mystical includes the KDE palette, Plasma style, splash screen and moonlit wallpaper."
+  info "Breeze widget geometry, icons and cursor remain in place for compatibility."
 }
 
 task_gaming() {
@@ -309,7 +348,7 @@ declare -A TASKS=(
   [14]="Enable automatic APT updates"
   [15]="Remove KDE and convert to headless server"
   [16]="Set up Ark-style /ark storage and GPU groups"
-  [17]="Add woman command as a man alias"
+  [17]="Add woman command as a man alias"\n  [18]="Apply the Mystical KDE theme"
 )
 
 run_task() {
@@ -330,7 +369,7 @@ run_task() {
     14) task_auto_updates ;;
     15) task_headless ;;
     16) task_ark_storage ;;
-    17) task_woman ;;
+    17) task_woman ;;\n    18) task_mystical_theme ;;
     *) die "Unknown task: $1" ;;
   esac
 }
@@ -434,7 +473,7 @@ EOF
   fi
   while true; do
     local choices=()
-    for n in $(seq 1 17); do
+    for n in $(seq 1 18); do
       choices+=("$n" "${TASKS[$n]}")
     done
     local choice
