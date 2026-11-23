@@ -35,14 +35,19 @@ dest() { printf '%s/%s' "$ROOT" "${1#/}"; }
 install -d "$(dest /usr/share/color-schemes)"
 install -m 0644 "$SOURCE/colors/Mystical.colors" "$(dest /usr/share/color-schemes/Mystical.colors)"
 
-install -d "$(dest /usr/share/plasma/look-and-feel)"
-cp -a "$SOURCE/look-and-feel/org.lydark.mystical.desktop" "$(dest /usr/share/plasma/look-and-feel/)"
+copy_tree() {
+  local source_path="$1" target_path="$2"
+  install -d "$(dirname -- "$(dest "$target_path")")"
+  rm -rf -- "$(dest "$target_path")"
+  cp -a "$source_path" "$(dest "$target_path")"
+}
 
-install -d "$(dest /usr/share/plasma/desktoptheme)"
-cp -a "$SOURCE/plasma-style/org.lydark.mystical.desktop" "$(dest /usr/share/plasma/desktoptheme/)"
-
-install -d "$(dest /usr/share/wallpapers)"
-cp -a "$SOURCE/wallpaper" "$(dest /usr/share/wallpapers/org.lydark.mystical.wallpaper)"
+copy_tree "$SOURCE/look-and-feel/org.lydark.mystical.desktop" \
+  /usr/share/plasma/look-and-feel/org.lydark.mystical.desktop
+copy_tree "$SOURCE/plasma-style/org.lydark.mystical.desktop" \
+  /usr/share/plasma/desktoptheme/org.lydark.mystical.desktop
+copy_tree "$SOURCE/wallpaper" \
+  /usr/share/wallpapers/org.lydark.mystical.wallpaper
 
 install -d "$(dest /usr/share/lyd/mystical)"
 cp -a "$SOURCE/icons" "$(dest /usr/share/lyd/mystical/)"
@@ -79,8 +84,8 @@ EOF
 
 # Preserve the source tree and installer for future edits/re-application.
 if [[ "$SOURCE" != "$(dest /usr/share/lyd/themes/mystical)" ]]; then
-  install -d "$(dest /usr/share/lyd/themes)"
-  cp -a "$SOURCE" "$(dest /usr/share/lyd/themes/mystical)"
+  install -d "$(dest /usr/share/lyd/themes/mystical)"
+  cp -a "$SOURCE/." "$(dest /usr/share/lyd/themes/mystical)/"
 fi
 install -d "$(dest /usr/local/lib/lyd)"
 install -m 0755 "$SCRIPT_DIR/$(basename -- "$0")" "$(dest /usr/local/lib/lyd/install-mystical-theme.sh)" 2>/dev/null || true
