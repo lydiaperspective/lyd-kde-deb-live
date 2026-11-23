@@ -24,7 +24,6 @@ whiptail
 python3
 bash-completion
 zsh
-zsh-completions
 rsync
 rclone
 unzip
