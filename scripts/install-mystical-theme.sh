@@ -31,7 +31,14 @@ fi
 SOURCE="$(realpath -e "$SOURCE")"
 [[ -d "$SOURCE" ]] || { echo "Theme source not found: $SOURCE" >&2; exit 1; }
 
-dest() { printf '%s/%s' "$ROOT" "${1#/}"; }
+dest() {
+  local relative="${1#/}"
+  if [[ "$ROOT" == "/" ]]; then
+    printf '/ %s' "$relative" | tr -d ' '
+  else
+    printf '%s/%s' "$ROOT" "$relative"
+  fi
+}
 install -d "$(dest /usr/share/color-schemes)"
 install -m 0644 "$SOURCE/colors/Mystical.colors" "$(dest /usr/share/color-schemes/Mystical.colors)"
 
@@ -88,6 +95,10 @@ if [[ "$SOURCE" != "$(dest /usr/share/lyd/themes/mystical)" ]]; then
   cp -a "$SOURCE/." "$(dest /usr/share/lyd/themes/mystical)/"
 fi
 install -d "$(dest /usr/local/lib/lyd)"
-install -m 0755 "$SCRIPT_DIR/$(basename -- "$0")" "$(dest /usr/local/lib/lyd/install-mystical-theme.sh)" 2>/dev/null || true
+INSTALLER_SOURCE="$SCRIPT_DIR/$(basename -- "$0")"
+INSTALLER_TARGET="$(dest /usr/local/lib/lyd/install-mystical-theme.sh)"
+if [[ "$(realpath -m "$INSTALLER_SOURCE")" != "$(realpath -m "$INSTALLER_TARGET")" ]]; then
+  install -m 0755 "$INSTALLER_SOURCE" "$INSTALLER_TARGET"
+fi
 
 echo "Mystical KDE theme installed under $ROOT."
