@@ -32,7 +32,7 @@ install -m 0755 "$ROOT_DIR/scripts/lydsys" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/sbin/lydsys"
 
 cd "$PROFILE_DIR"
-export LB_CONFIG_OPTIONS=""
+chmod +x auto/config
 lb clean --purge
 lb config
 lb build
