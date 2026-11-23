@@ -32,6 +32,8 @@ install -m 0755 "$ROOT_DIR/scripts/lydsys" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/sbin/lydsys"
 install -m 0755 "$ROOT_DIR/scripts/lydhelp" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/bin/lydhelp"
+install -m 0755 "$ROOT_DIR/scripts/lyd-btrfs-postinstall" \
+  "$PROFILE_DIR/config/includes.chroot/usr/local/sbin/lyd-btrfs-postinstall"
 
 cd "$PROFILE_DIR"
 chmod +x auto/config
