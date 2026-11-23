@@ -115,24 +115,14 @@ jobs:
     needs: build
     runs-on: ubuntu-24.04
     steps:
+      - name: Check out repository for the recombination helper
+        uses: actions/checkout@v4
+
       - name: Download both ISO artifacts
         uses: actions/download-artifact@v4
         with:
           path: release-assets
           merge-multiple: true
-
-      - name: Split ISOs into GitHub-compatible release assets
-        run: |
-          set -euo pipefail
-          # GitHub Releases rejects individual assets at or above 2 GiB.
-          # Keep each part below that limit and retain the original ISO checksum.
-          for iso in release-assets/*.iso; do
-            [ -f "$iso" ] || continue
-            split --bytes=1900M --numeric-suffixes=0 --suffix-length=3 \
-              "$iso" "$iso.part-"
-            rm -- "$iso"
-          done
-          install -m 0644 scripts/recombine-isos.sh release-assets/recombine-isos.sh
 
       - name: Publish rolling latest build
         if: github.ref == 'refs/heads/main'
@@ -142,13 +132,13 @@ jobs:
           TARGET_SHA: ${{ github.sha }}
         run: |
           # The GitHub CLI deletes the release and its tag through the API.
-          # No local git checkout is needed in this publishing-only job.
+          # The checkout supplies the recombination helper; --repo keeps gh explicit.
           gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
           gh release create "$TAG" release-assets/* \
             --repo "$GITHUB_REPOSITORY" \
             --target "$TARGET_SHA" \
             --title "lyd Debian Live - Latest" \
-            --notes "Automatically updated from the latest successful build of the main branch.\n\nCommit: $TARGET_SHA\n\nThis is a rolling development build; assets are replaced by the next successful main-branch build. Download every .part file for an ISO, then run recombine-isos.sh in the same directory to reconstruct and verify it." \
+            --notes "Automatically updated from the latest successful build of the main branch.\n\nCommit: $TARGET_SHA\n\nThis is a rolling development build; assets are replaced by the next successful main-branch build." \
             --prerelease
 
       - name: Publish versioned release
