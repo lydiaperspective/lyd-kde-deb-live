@@ -1,5 +1,7 @@
 # Desktop environment
 task-kde-desktop
+# Desktop entry for launching Debian Installer from the live KDE session
+debian-installer-launcher
 sddm
 plasma-nm
 plasma-pa
