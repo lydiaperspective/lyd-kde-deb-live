@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Install a lyd desktop or server profile onto an existing Debian 13 system.
 set -Eeuo pipefail
-PROFILE="\${1:-}"
-ROOT_DIR="$(cd -- "$(dirname -- "\${BASH_SOURCE[0]}")/.." && pwd)"
+PROFILE="${1:-}"
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 case "$PROFILE" in desktop|server) ;; *) echo "Usage: sudo bash scripts/install-existing-debian.sh {desktop|server}" >&2; exit 2 ;; esac
 [[ $EUID -eq 0 ]] || { echo "Run with sudo." >&2; exit 1; }
 . /etc/os-release
-[[ "\${ID:-}" == debian && "\${VERSION_ID:-}" == 13 ]] || { echo "Debian 13 (Trixie) is required; found \${PRETTY_NAME:-unknown}." >&2; exit 1; }
+[[ "${ID:-}" == debian && "${VERSION_ID:-}" == 13 ]] || { echo "Debian 13 (Trixie) is required; found ${PRETTY_NAME:-unknown}." >&2; exit 1; }
 [[ "$(dpkg --print-architecture)" == amd64 ]] || { echo "This build targets amd64." >&2; exit 1; }
 [[ -d "$ROOT_DIR/themes/mystical" && -f "$ROOT_DIR/profiles/$PROFILE/config/package-lists/$PROFILE.list.chroot" ]] || { echo "Run from a clone of https://github.com/lydiaperspective/lyd-kde-deb-live" >&2; exit 1; }
 [[ -t 0 && -t 1 ]] || { echo "Run from an interactive terminal; this script asks before system-level changes." >&2; exit 1; }
@@ -108,7 +108,7 @@ if [[ "$PROFILE" == desktop ]]; then
   install -D -m 0644 "$INC/usr/share/konsole/Lyd-Mystical.profile" /usr/share/konsole/Lyd-Mystical.profile
   install -D -m 0644 "$INC/etc/xdg/konsolerc" /etc/xdg/konsolerc
   log "Installed Mystical KDE theme, wallpaper helper, and Konsole profile."
-  DESKTOP_USER="\${SUDO_USER:-}"
+  DESKTOP_USER="${SUDO_USER:-}"
   if [[ -n "$DESKTOP_USER" && "$DESKTOP_USER" != root ]] && id "$DESKTOP_USER" >/dev/null 2>&1 && command -v lookandfeeltool >/dev/null 2>&1; then
     if ask "Apply the Mystical Global Theme to '$DESKTOP_USER' now?"; then
       USER_HOME="$(getent passwd "$DESKTOP_USER" | cut -d: -f6)"
@@ -120,7 +120,7 @@ if [[ "$PROFILE" == desktop ]]; then
   else
     log "Existing user's KDE settings were not overwritten; apply Mystical from System Settings > Appearance > Global Theme."
   fi
-  if dpkg-query -W -f='\${Status}' kwin-common 2>/dev/null | grep -q 'install ok installed'; then
+  if dpkg-query -W -f='${Status}' kwin-common 2>/dev/null | grep -q 'install ok installed'; then
     log "Aurorae runtime is provided by Debian kwin-common; no duplicate plugin installed."
   fi
 else
