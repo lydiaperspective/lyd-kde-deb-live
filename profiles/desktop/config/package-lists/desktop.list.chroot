@@ -18,6 +18,9 @@ kde-spectacle
 partitionmanager
 kde-config-sddm
 breeze-gtk-theme
+breeze-icon-theme
+hicolor-icon-theme
+adwaita-icon-theme
 breeze-cursor-theme
 kde-config-gtk-style
 network-manager
