@@ -17,7 +17,7 @@ The project currently targets **Debian 13 (Trixie), amd64, UEFI/GPT**. Keep a se
 4. Follow the installer prompts. The guided recipe is GPT with a 1 GiB EFI System Partition, 8 GiB swap, and the remaining space as Btrfs mounted at `/`. The installer asks you to choose the target disk and confirm partition changes; it does not silently choose a disk.
 5. Let the installation finish and reboot into the installed system.
 
-The custom ISO's installer late step creates `@home` and `@var`, configures Snapper and its cleanup/timeline timers, enables `grub-btrfsd`, creates an initial snapshot, and regenerates GRUB. The desktop image also installs the Mystical KDE and Konsole defaults. The server image remains headless and applies its server firewall policy.
+The custom ISO's installer late step creates `@home` and `@var`, configures Snapper and its cleanup/timeline timers, enables `grub-btrfsd`, creates an initial snapshot, and regenerates GRUB. The desktop image uses Debian's minimal `kde-plasma-desktop` metapackage rather than the broader `task-kde-desktop` task, so LibreOffice and the task's other optional extras are not installed by default. It also installs the Mystical KDE and Konsole defaults. The server image remains headless and applies its server firewall policy.
 
 ### Path B — install standard Debian 13, then apply lyd
 
@@ -69,7 +69,7 @@ The script checks that the system is Debian 13 amd64 and requires an interactive
 
 It creates a timestamped log under `/var/log/lyd-install/` and configuration backups under `/var/backups/lyd-install/`. It asks before applying the Mystical GRUB theme, changing the server Firewalld policy, and running the Btrfs/Snapper migration. Read each prompt before accepting it.
 
-If you decline the Btrfs step, first review the layout and then run:
+After installation, run `sudo lydsys run 20` if you want to remove optional desktop extras left by an older/full KDE task installation. It lists the packages it intends to purge, asks before removal, and separately previews APT's autoremove candidates. Plasma and the explicitly selected KDE applications are not targeted.\n\nIf you decline the Btrfs step, first review the layout and then run:
 
 ```bash
 sudo /usr/local/sbin/lyd-btrfs-postinstall
