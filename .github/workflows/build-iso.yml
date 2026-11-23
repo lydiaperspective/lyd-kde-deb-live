@@ -81,6 +81,7 @@ jobs:
           bash -n scripts/stage-grub-btrfs.sh
           bash -n "profiles/${{ matrix.profile }}/config/includes.chroot/etc/grub.d/41_snapshots-btrfs"
           bash -n scripts/install-mystical-theme.sh
+          bash -n scripts/lyd-mystical-first-login
           bash -n scripts/install-grub-theme.sh
           sh -n scripts/9999-grub-theme.hook.binary
           bash -n scripts/build-iso.sh

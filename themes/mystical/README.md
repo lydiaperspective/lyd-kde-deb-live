@@ -70,7 +70,8 @@ The later KDE Plasma splash remains a separate component and uses the approved g
 - [x] Expanded KDE colour roles for windows, views, buttons, headers, selections, tooltips, and window decorations
 - [x] Plasma 6 startup splash package (QML + SVG artwork; runtime validation pending)
 - [x] Plymouth lunar boot theme with a progress-independent looping phase animation (runtime validation pending)
-- [ ] Wallpapers with celestial and botanical motifs
+- [x] Default moonlit-garden wallpaper, applied once on first Plasma login
+- [x] Translucent panel background with a fine lavender outline
 - [x] Cartoon crescent launcher emblem
 - [x] Initial Mystical cartoon SVG icon family
 - [ ] Full installable KDE icon theme with application/system icon coverage
@@ -80,3 +81,12 @@ The later KDE Plasma splash remains a separate component and uses the approved g
 ## System Manager integration
 
 Lyd Ark System Manager should use native KDE/Qt styling and follow the active system palette and Plasma theme. It should not impose a separate Mystical-only layout or spacing system.
+
+
+## Panel and wallpaper
+
+The Plasma style supplies a translucent midnight-plum panel with a restrained lavender outline and rounded corners. The wallpaper helper applies the bundled moonlit-garden SVG once per user on first Plasma login, then records a marker in the user's configuration directory so later logins do not overwrite a wallpaper they choose themselves.
+
+## Aurorae availability on Debian 13
+
+The Aurorae engine package is named `kwin-style-aurorae`, but it is not published in Debian 13 (Trixie). It is available in Debian testing (Forky) and unstable (Sid). This project does not mix those repositories into a Trixie image or install a newer KWin component against the stable Plasma stack. The supported Breeze decoration remains in place until a Trixie-compatible package or a tested source build is available.

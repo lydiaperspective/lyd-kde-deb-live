@@ -60,6 +60,20 @@ install -d "$(dest /usr/share/lyd/mystical)"
 cp -a "$SOURCE/icons" "$(dest /usr/share/lyd/mystical/)"
 install -m 0644 "$SOURCE/README.md" "$(dest /usr/share/lyd/mystical/README.md)"
 
+# Set the bundled wallpaper once for each user at first Plasma login.
+install -d "$(dest /usr/local/lib/lyd)" "$(dest /etc/xdg/autostart)"
+install -m 0755 "$SCRIPT_DIR/lyd-mystical-first-login" "$(dest /usr/local/lib/lyd/lyd-mystical-first-login)"
+cat > "$(dest /etc/xdg/autostart/lyd-mystical-wallpaper.desktop)" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Lyd Ark Mystical Wallpaper
+Comment=Set the Mystical moonlit garden wallpaper on first login
+Exec=/usr/local/lib/lyd/lyd-mystical-first-login
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=2
+X-KDE-autostart-after=plasma
+EOF
+
 # XDG defaults apply to new users while respecting settings already saved in
 # an individual user's ~/.config directory.
 install -d "$(dest /etc/xdg)"
