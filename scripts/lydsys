@@ -3,8 +3,14 @@
 set -Eeuo pipefail
 
 VERSION="0.1.0"
-if [[ $EUID -ne 0 && "${1:-}" != "--help" && "${1:-}" != "-h" && "${1:-}" != "help" ]]; then
-  exec sudo -- "$0" "$@"
+if [[ $EUID -ne 0 ]]; then
+  case "${1:-}" in
+    --help|-h|help)
+      printf 'lydsys %s\\nUsage: sudo lydsys | sudo lydsys list | sudo lydsys run NUMBER\\n' "$VERSION"
+      exit 0
+      ;;
+    *) exec sudo -- "$0" "$@" ;;
+  esac
 fi
 LOG_DIR="/var/log/lydsys"
 mkdir -p "$LOG_DIR"
@@ -234,6 +240,31 @@ task_auto_updates() {
   info "Debian unattended security updates configured using the package defaults."
 }
 
+
+task_ark_storage() {
+  local admin_user="${SUDO_USER:-}"
+  if [[ -z "$admin_user" || "$admin_user" == "root" ]]; then
+    read -r -p "Linux account to add to the ark/video/render groups: " admin_user
+  fi
+  id "$admin_user" >/dev/null 2>&1 || die "User '$admin_user' does not exist."
+  for group in ark video render; do
+    getent group "$group" >/dev/null || groupadd --system "$group"
+  done
+  install -d -o root -g ark -m 2775 /ark
+  for dir in Containers Media Share Configs; do
+    install -d -o root -g ark -m 2775 "/ark/$dir"
+  done
+  usermod -aG ark,video,render "$admin_user"
+  info "Created the standard /ark directory layout:"
+  printf '  /ark/Containers  Compose projects and application data\\n'
+  printf '  /ark/Media       Media libraries\\n'
+  printf '  /ark/Share       NFS/Samba share content\\n'
+  printf '  /ark/Configs     User-managed service configuration\\n'
+  info "Added $admin_user to ark, video and render groups."
+  warn "Existing directory contents were not recursively chowned. Log out and back in for new group membership."
+  warn "Podman's internal graph root is separate from /ark/Containers; this task does not move container storage."
+}
+
 task_headless() {
   if ! dpkg-query -W -f='${Status}' task-kde-desktop 2>/dev/null | grep -q 'install ok installed'; then
     warn "KDE task package not detected. No desktop removal performed."
@@ -263,6 +294,7 @@ declare -A TASKS=(
   [13]="Install legacy Intel VA-API driver (Ivy Bridge)"
   [14]="Enable automatic APT updates"
   [15]="Remove KDE and convert to headless server"
+  [16]="Set up Ark-style /ark storage and GPU groups"
 )
 
 run_task() {
@@ -282,6 +314,7 @@ run_task() {
     13) task_intel_vaapi ;;
     14) task_auto_updates ;;
     15) task_headless ;;
+    16) task_ark_storage ;;
     *) die "Unknown task: $1" ;;
   esac
 }
@@ -291,9 +324,14 @@ show_help() {
 lydsys $VERSION
 Usage:
   sudo lydsys             Open the interactive menu
-  sudo lydsys list        List available task numbers
-  sudo lydsys run NUMBER  Run one task by number
-  lydsys --help           Show this help
+  sudo lydsys list              List configuration tasks
+  sudo lydsys run NUMBER        Run one task by number
+  sudo lydsys info              Show system information
+  sudo lydsys storage list      List standard /ark locations
+  sudo lydsys storage status    Show storage mount status
+  sudo lydsys config path       Show the config file path
+  sudo lydsys config show       Show built-in configuration defaults
+  lydsys --help                 Show this help
 
 Logs: $LOG_DIR
 EOF
@@ -322,13 +360,13 @@ main() {
   fi
   while true; do
     local choices=()
-    for n in $(seq 1 15); do
+    for n in $(seq 1 16); do
       choices+=("$n" "${TASKS[$n]}")
     done
     local choice
     choice="$(whiptail --title "lydsys $VERSION" --menu \
       "Select an optional system configuration task. Changes are logged to $LOG_FILE." \
-      24 88 16 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
+      25 92 17 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
     clear
     if run_task "$choice"; then
       info "Task completed: ${TASKS[$choice]}"
