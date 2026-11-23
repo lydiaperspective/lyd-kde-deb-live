@@ -27,6 +27,14 @@ command -v lb >/dev/null || {
   exit 1
 }
 
+LB_VERSION="$(dpkg-query -W -f='${Version}' live-build 2>/dev/null || true)"
+if [[ -z "$LB_VERSION" ]] || ! dpkg --compare-versions "$LB_VERSION" ge "1:20250505"; then
+  echo "A recent Debian 13 live-build is required (version 1:20250505 or newer)." >&2
+  echo "The older Ubuntu 24.04 live-build package uses obsolete Debian Installer package names." >&2
+  echo "Build from a Debian 13 (Trixie) host or use the GitHub Actions build." >&2
+  exit 1
+fi
+
 mkdir -p "$PROFILE_DIR/config/includes.chroot/usr/local/sbin"
 install -m 0755 "$ROOT_DIR/scripts/lydsys" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/sbin/lydsys"
