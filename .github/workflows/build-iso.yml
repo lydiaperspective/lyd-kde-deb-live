@@ -35,7 +35,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             live-build debootstrap squashfs-tools xorriso \
             isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin \
-            mtools dosfstools rsync
+            mtools dosfstools rsync grub-common librsvg2-bin fonts-dejavu-core
 
       - name: Fix live-build firmware index lookup
         run: |
@@ -61,6 +61,8 @@ jobs:
           bash -n scripts/lydhelp
           bash -n scripts/lyd-btrfs-postinstall
           bash -n scripts/install-mystical-theme.sh
+          bash -n scripts/install-grub-theme.sh
+          sh -n scripts/9999-grub-theme.hook.binary
           bash -n scripts/build-iso.sh
           bash -n scripts/patch-live-build-firmware-index.sh
           sh -n profiles/desktop/auto/config
