@@ -10,14 +10,14 @@ log() { printf '[lyd-btrfs] %s\n' "$*"; }
 fail() { log "ERROR: $*"; exit 1; }
 
 [[ $EUID -eq 0 ]] || fail "Must run as root."
-command -v btrfs >/dev/null 2>&1 || fail "btrfs-progs is not installed."
-command -v findfs >/dev/null 2>&1 || fail "findfs is unavailable."
+command -v btrfs >/dev/null 2>&1 || { log "Btrfs tools unavailable; skipping optional post-install setup."; exit 0; }
+command -v findfs >/dev/null 2>&1 || { log "findfs unavailable; skipping optional post-install setup."; exit 0; }
 
 ROOT_SPEC="$(awk '$1 !~ /^#/ && $2 == "/" && $3 == "btrfs" { print $1; exit }' /etc/fstab)"
-[[ -n "$ROOT_SPEC" ]] || fail "No Btrfs root entry found in /etc/fstab."
+[[ -n "$ROOT_SPEC" ]] || { log "No Btrfs root entry found; preserving the manually selected layout."; exit 0; }
 
 ROOT_DEVICE="$(findfs "$ROOT_SPEC" 2>/dev/null || true)"
-[[ -b "$ROOT_DEVICE" ]] || fail "Could not resolve Btrfs root device from $ROOT_SPEC."
+[[ -b "$ROOT_DEVICE" ]] || { log "Could not resolve Btrfs root device from $ROOT_SPEC; skipping."; exit 0; }
 
 if awk '$1 !~ /^#/ && $2 == "/home" { found=1 } END { exit !found }' /etc/fstab; then
   log "An existing /home mount is configured; preserving it."
