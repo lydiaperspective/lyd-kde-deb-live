@@ -44,10 +44,11 @@ For a stable, versioned release, push a tag such as `v0.1.0`; this creates a sep
 ### Desktop
 - Debian 13 Trixie, amd64
 - KDE Plasma desktop task and SDDM
+- Debian Installer desktop launcher (`Install Debian`) available from the live desktop's application menu
 - Firefox ESR, NetworkManager, firmware, Flatpak and Discover Flatpak support
 - Common utilities; optional gaming performance and virtualization components can be added later with `lydsetup`
 - Snapper and `grub-btrfs` snapshot menu integration on the installed system
-- The **Mystical** KDE Global Theme: midnight-plum colour scheme, Plasma panel/widget style, moonlit wallpaper, animated Plasma splash, Breeze-compatible GTK integration, and original lunar/botanical artwork
+- The **Mystical** KDE Global Theme selected by default in the live Plasma session: midnight-plum colour scheme, Plasma panel/widget style, moonlit wallpaper, animated Plasma splash, Breeze-compatible GTK integration, and original lunar/botanical artwork
 - The Mystical GRUB boot theme on the desktop ISO UEFI menu, using the same moonlit artwork and plum/lavender/gold palette
 - `lydsys` and the `lydhelp` command-line reference
 
@@ -72,7 +73,7 @@ For Ivy Bridge Intel HD Graphics (such as the i7-3770S' integrated GPU), the leg
 
 ## Important design notes
 
-- The live system and installed system are separate environments. The included live installer is Debian Installer's live mode; verify the installer path and installed package persistence during the first test cycle.
+- The live system and installed system are separate environments. The desktop image includes `debian-installer-launcher`, which starts Debian Installer from the live desktop application menu. The KDE Mystical theme applies to the live Plasma desktop; Debian Installer's own GTK interface remains Debian's standard installer UI.
 - Both profiles use Debian's `main contrib non-free non-free-firmware` archive areas to make firmware and optional non-free driver packages available.
 - The desktop ISO uses the Mystical theme in its UEFI GRUB menu; the legacy BIOS live menu remains the standard Syslinux/ISOLINUX menu. Both images include the optional installed-system GRUB theme helper and assets. The server live menu remains simple, and the server remains headless without Plasma theme packages.
 - The ISO build itself does not create a custom APT repository. Installed systems receive normal Debian updates. A project-owned signed APT repository can be added later for lydsys and distribution packages.
