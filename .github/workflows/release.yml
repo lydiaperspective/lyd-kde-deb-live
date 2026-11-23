@@ -95,7 +95,7 @@ jobs:
           lb build
           SOURCE_ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)"
           test -n "$SOURCE_ISO"
-          ISO="lyd-debian-${{ matrix.profile }}-amd64.iso"
+          ISO="lyd-deb-${{ matrix.profile }}.iso"
           mv -- "$SOURCE_ISO" "$ISO"
           sha256sum "$ISO" > "$ISO.sha256"
 
@@ -127,10 +127,9 @@ jobs:
           TAG: latest
           TARGET_SHA: ${{ github.sha }}
         run: |
-          # Replace the previous rolling release and its tag so the release
-          # source archive and assets both correspond to this exact commit.
+          # The GitHub CLI deletes the release and its tag through the API.
+          # No local git checkout is needed in this publishing-only job.
           gh release delete "$TAG" --cleanup-tag --yes || true
-          git push origin ":refs/tags/$TAG" || true
           gh release create "$TAG" release-assets/* \
             --target "$TARGET_SHA" \
             --title "lyd Debian Live - Latest" \
