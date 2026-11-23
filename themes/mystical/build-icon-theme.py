@@ -72,6 +72,30 @@ for name, glyph in ICONS.items():
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(render(name, glyph), encoding="utf-8")
 
+# Desktop files and toolkits use several equivalent icon names. Provide
+# explicit aliases so the Mystical artwork is selected consistently.
+ALIASES = {
+    "apps/dolphin": "apps/org.kde.dolphin",
+    "apps/konsole": "apps/org.kde.konsole",
+    "apps/org.kde.kate": "apps/kate",
+    "apps/okular": "apps/org.kde.okular",
+    "apps/spectacle": "apps/org.kde.spectacle",
+    "apps/discover": "apps/org.kde.discover",
+    "apps/systemsettings": "apps/preferences-system",
+    "apps/org.kde.systemsettings": "apps/preferences-system",
+    "places/user-home": "places/folder-home",
+    "places/folder-downloads": "places/folder-download",
+    "actions/edit-delete-shred": "actions/edit-delete",
+    "mimetypes/application-x-pdf": "mimetypes/application-pdf",
+    "mimetypes/application-x-shellscript": "mimetypes/text-x-script",
+    "devices/drive-removable-media-usb": "devices/drive-removable-media",
+}
+for alias, original in ALIASES.items():
+    source = OUT / "scalable" / (original + ".svg")
+    target = OUT / "scalable" / (alias + ".svg")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(source.read_bytes())
+
 contexts = {"apps":"Applications","places":"Places","devices":"Devices","mimetypes":"MimeTypes","actions":"Actions","status":"Status","categories":"Categories"}
 index = ["[Icon Theme]", "Name=Mystical", "Comment=Cozy lunar and botanical icon theme for KDE Plasma", "Inherits=Breeze,hicolor", "Example=system-file-manager", "DesktopDefault=48", "ToolbarDefault=22", "MainToolbarDefault=22", "SmallDefault=16", "PanelDefault=22", "DialogDefault=32", ""]
 for folder, context in contexts.items():
