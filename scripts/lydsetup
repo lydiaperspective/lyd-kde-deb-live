@@ -141,6 +141,8 @@ task_nvidia() {
   install_pkgs linux-headers-amd64 dkms nvidia-driver nvidia-kernel-dkms nvidia-settings
 }
 
+task_grub_theme() { run_lydsys 19; }
+
 task_headless() {
   msg "This is a destructive desktop-to-headless conversion. It removes KDE/SDDM packages and changes the default boot target. Do not run it over a remote session unless SSH access is verified."
   confirm "Simulate the KDE/SDDM package removal first?" || return 0
@@ -206,6 +208,7 @@ declare -A LABELS=(
   [btrfs]="Configure Btrfs root mount options"
   [nvidia]="Install Debian-packaged NVIDIA driver"
   [headless]="Convert KDE installation to headless"
+  [grub]="Apply the Mystical GRUB boot theme"
 )
 
 run_task() {
@@ -224,6 +227,7 @@ run_task() {
     btrfs) task_btrfs ;;
     nvidia) task_nvidia ;;
     headless) task_headless ;;
+    grub) task_grub_theme ;;
     *) die "Unknown task: $1" ;;
   esac
 }
@@ -254,7 +258,7 @@ HELP
   choose_profile
   local -a opts=()
   local id
-  for id in update desktop gaming virtualization flatpak podman tuned cockpit ssh tailscale snapper btrfs nvidia headless; do
+  for id in update desktop gaming virtualization flatpak podman tuned cockpit ssh tailscale snapper btrfs nvidia headless grub; do
     opts+=("$id" "${LABELS[$id]}" "$(state_for "$id")")
   done
   mapfile -t SELECTED < <(whiptail --title "$APP_NAME $VERSION" --checklist \
