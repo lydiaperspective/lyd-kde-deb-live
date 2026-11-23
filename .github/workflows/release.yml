@@ -20,17 +20,16 @@ jobs:
         profile: [desktop, server]
 
     steps:
+      - name: Install Debian Trixie build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates live-build debootstrap squashfs-tools xorriso \
+            isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin \
+            mtools dosfstools rsync grub-common librsvg2-bin fonts-dejavu-core
 
       - name: Check out repository
         uses: actions/checkout@v4
-
-      - name: Install live-build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            live-build debootstrap squashfs-tools xorriso \
-            isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin \
-            mtools dosfstools rsync grub-common librsvg2-bin fonts-dejavu-core
 
       - name: Prepare lydsys include
         run: |
@@ -38,6 +37,8 @@ jobs:
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lydsys"
           install -D -m 0755 scripts/lydhelp \
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/bin/lydhelp"
+          install -D -m 0755 scripts/lydsetup \
+            "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/bin/lydsetup"
           install -D -m 0755 scripts/lyd-btrfs-postinstall \
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lyd-btrfs-postinstall"
           if [ "${{ matrix.profile }}" = "desktop" ]; then
