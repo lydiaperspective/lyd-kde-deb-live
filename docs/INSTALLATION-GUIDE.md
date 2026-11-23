@@ -67,7 +67,7 @@ sudo bash scripts/install-existing-debian.sh server
 
 The script checks that the system is Debian 13 amd64 and requires an interactive terminal. It installs the packages from the selected ISO profile, the lyd helper commands, the pinned grub-btrfs integration, and the relevant theme assets. It does not repartition disks, replace the installed bootloader, or run a full system upgrade.
 
-It creates a timestamped log under `/var/log/lyd-install/` and configuration backups under `/var/backups/lyd-install/`. It asks before applying the Mystical GRUB theme, changing the server Firewalld policy, and running the Btrfs/Snapper migration. Read each prompt before accepting it.
+It creates a timestamped log under `/var/log/lyd-install/` and configuration backups under `/var/backups/lyd-install/`. It asks before applying the Mystical GRUB theme, changing the server Firewalld policy, and running the Btrfs/Snapper migration. Read each prompt before accepting it. For the desktop profile, it also offers to run the optional cleanup task to remove LibreOffice and other extras from an older/full KDE installation; decline it to leave the current packages unchanged.
 
 After installation, run `sudo lydsys run 20` if you want to remove optional desktop extras left by an older/full KDE task installation. It lists the packages it intends to purge, asks before removal, and separately previews APT's autoremove candidates. Plasma and the explicitly selected KDE applications are not targeted.\n\nIf you decline the Btrfs step, first review the layout and then run:
 
