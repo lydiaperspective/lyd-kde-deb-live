@@ -17,14 +17,14 @@ On a Debian 13 build host, install the build dependencies:
 
 ```bash
 sudo apt update
-sudo apt install live-build debootstrap squashfs-tools xorriso   isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin   mtools dosfstools
+sudo apt install live-build debootstrap squashfs-tools xorriso \\\n  isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin \\\n  mtools dosfstools
 ```
 
 Build either image:
 
 ```bash
-./scripts/build-iso.sh desktop
-./scripts/build-iso.sh server
+bash scripts/build-iso.sh desktop
+bash scripts/build-iso.sh server
 ```
 
 The generated ISO is placed in the selected profile directory. Builds require root privileges for live-build; the script uses sudo when needed.
@@ -52,7 +52,7 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 
 ### lydsys
 
-Run `sudo lydsys` after installation. It offers optional configuration tasks for system updates, KDE workstation tools, gaming, Btrfs mount options, Snapper, Flatpak, Podman, TuneD, Cockpit, SSH, Tailscale, virtualization, legacy Intel VA-API, automatic APT updates, and removing KDE to make a desktop install headless.
+Run `sudo lydsys` after installation. It offers optional configuration tasks for system updates, KDE workstation tools, gaming, Btrfs mount options, Snapper, Flatpak, Podman, TuneD, Cockpit, SSH, Tailscale, virtualization, legacy Intel VA-API, automatic APT updates, removing KDE to make a desktop install headless, and creating the Ark-style `/ark` storage layout with `ark`, `video` and `render` group membership. Read-only commands include `lydsys info`, `lydsys storage list`, and `lydsys storage status`. The `/ark` layout uses `Containers`, `Media`, `Share`, and `Configs`; it does not relocate Podman's graph root or migrate existing data.
 
 Tasks are opt-in. The utility does not repartition disks or silently convert filesystem layouts. Snapper setup requires a Btrfs root subvolume and deliberately stops if an existing `/.snapshots` layout needs inspection.
 
