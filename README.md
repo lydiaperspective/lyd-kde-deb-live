@@ -42,19 +42,20 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 - KDE Plasma desktop task and SDDM
 - Firefox ESR, NetworkManager, firmware, Flatpak and Discover Flatpak support
 - Common utilities, gaming tools and virtualization packages
-- lydsys and the `lydhelp` command-line reference and the `lydhelp` command-line reference
+- `lydsys` and the `lydhelp` command-line reference
 
 ### Server
 - Debian 13 Trixie, amd64
 - No desktop environment
 - OpenSSH server, Podman, Cockpit, tuned, btrfs-progs, Snapper and common administration tools
-- lydsys
+- `lydsys`
+- The same guided UEFI/GPT Btrfs installation layout and post-install `@home`/Snapper setup as the desktop image
 
 ### lydsys
 
 Run `sudo lydsys` after installation. The `lydhelp` command is included by default and provides topic-based terminal help for files, folders, search, permissions, storage, processes, networking, packages and archives. It offers optional configuration tasks for system updates, KDE workstation tools, gaming, Btrfs mount options, Snapper, Flatpak, Podman, TuneD, Cockpit, SSH, Tailscale, virtualization, legacy Intel VA-API, automatic APT updates, removing KDE to make a desktop install headless, and creating the Ark-style `/ark` storage layout with `ark`, `video` and `render` group membership, and adding the optional `woman` alias for `man`. Read-only commands include `lydsys info`, `lydsys storage list`, and `lydsys storage status`. The `/ark` layout uses `Containers`, `Media`, `Share`, and `Configs`; it does not relocate Podman's graph root or migrate existing data.
 
-Tasks are opt-in. The utility does not repartition disks or silently convert filesystem layouts. Snapper setup requires a Btrfs root subvolume and deliberately stops if an existing `/.snapshots` layout needs inspection.
+The installer defaults to a guided UEFI/GPT layout with a 1 GiB EFI System Partition, an 8 GiB swap partition, and the remaining space as Btrfs. The installer still asks you to choose the target disk and confirm partition changes; it does not silently erase a disk. Debian Installer creates the root subvolume (`@rootfs`), and a late-install step creates a sibling `@home` subvolume, migrates the initial home-directory contents, applies `noatime,compress=zstd:3`, and configures Snapper/timers when Snapper is present. This post-install path needs testing in both UEFI virtual machines and real hardware before release. Manual partitioning remains available, but the automatic post-install subvolume step expects the standard Btrfs root layout. Snapper snapshots are not backups.
 
 For Ivy Bridge Intel HD Graphics (such as the i7-3770S' integrated GPU), the legacy VA-API option installs Debian's `i965-va-driver` and `i965-va-driver-shaders` packages plus `vainfo`/FFmpeg. Debian documents Ivy Bridge support in this driver family. Encoding support depends on the codec and hardware entry point; verify with `vainfo` and your application. [Debian package details](https://packages.debian.org/trixie/i965-va-driver) · [shader package](https://packages.debian.org/trixie/i965-va-driver-shaders).
 
