@@ -44,29 +44,28 @@ if "/${_ARCHIVE_AREA}/Contents-${LB_ARCHITECTURES}.gz" not in text:
     raise SystemExit("Could not patch the kernel helper's Contents lookup")
 kernel_path.write_text(text)
 
-# Ubuntu's packaged live-build can leave LB_PARENT_ARCHIVE_AREAS empty in
-# non-derivative Debian builds. The installer firmware scan then constructs
-# the invalid URL .../dists/trixie//Contents-amd64.gz. Reuse the configured
-# archive areas for the parent mirror in that case.
+# The Debian Installer firmware scan uses parent archive areas. Ubuntu's
+# live-build defaults can leave that list empty for a non-derivative Debian
+# build, producing a suite-root Contents URL that does not exist on Debian.
+# Fall back at the point of use so later configuration/default processing
+# cannot overwrite the value before the scan runs.
 text = installer_path.read_text()
-marker = "Set_defaults"
-fallback = '''Set_defaults
-
-# Debian is not a derivative: use the configured archive components for
-# the parent-mirror firmware Contents lookup as well.
-if [ "${LB_DERIVATIVE}" != "true" ] && [ -z "${LB_PARENT_ARCHIVE_AREAS:-}" ]
-then
-    LB_PARENT_ARCHIVE_AREAS="${LB_ARCHIVE_AREAS}"
-fi'''
-if 'LB_PARENT_ARCHIVE_AREAS="${LB_ARCHIVE_AREAS}"' not in text:
-    if marker not in text:
-        raise SystemExit("Could not find Set_defaults in Debian Installer helper")
-    text = text.replace(marker, fallback, 1)
+old_areas = "for _PARENT_ARCHIVE_AREA in ${LB_PARENT_ARCHIVE_AREAS}"
+new_areas = "for _PARENT_ARCHIVE_AREA in ${LB_PARENT_ARCHIVE_AREAS:-${LB_ARCHIVE_AREAS}}"
+old_nonfree = "echo ${LB_PARENT_ARCHIVE_AREAS} | grep -qs"
+new_nonfree = "echo ${LB_PARENT_ARCHIVE_AREAS:-${LB_ARCHIVE_AREAS}} | grep -qs"
+if old_areas not in text:
+    raise SystemExit("Could not find Debian Installer parent-area Contents loop")
+if old_nonfree not in text:
+    raise SystemExit("Could not find Debian Installer non-free firmware check")
+text = text.replace(old_areas, new_areas, 1)
+text = text.replace(old_nonfree, new_nonfree, 1)
 installer_path.write_text(text)
 
-if 'LB_PARENT_ARCHIVE_AREAS="${LB_ARCHIVE_AREAS}"' not in installer_path.read_text():
+patched = installer_path.read_text()
+if new_areas not in patched or new_nonfree not in patched:
     raise SystemExit("Debian Installer archive-area fallback was not applied")
-print("Patched kernel Contents lookup and Debian Installer parent archive-area fallback.")
+print("Patched kernel and Debian Installer Contents lookups to use component archive areas.")
 PY
 
 grep -F '/${_ARCHIVE_AREA}/Contents-${LB_ARCHITECTURES}.gz' "$KERNEL_SCRIPT" >/dev/null
