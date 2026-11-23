@@ -42,7 +42,7 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 - KDE Plasma desktop task and SDDM
 - Firefox ESR, NetworkManager, firmware, Flatpak and Discover Flatpak support
 - Common utilities, gaming tools and virtualization packages
-- lydsys
+- lydsys and the `lydhelp` command-line reference and the `lydhelp` command-line reference
 
 ### Server
 - Debian 13 Trixie, amd64
@@ -52,7 +52,7 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 
 ### lydsys
 
-Run `sudo lydsys` after installation. It offers optional configuration tasks for system updates, KDE workstation tools, gaming, Btrfs mount options, Snapper, Flatpak, Podman, TuneD, Cockpit, SSH, Tailscale, virtualization, legacy Intel VA-API, automatic APT updates, removing KDE to make a desktop install headless, and creating the Ark-style `/ark` storage layout with `ark`, `video` and `render` group membership. Read-only commands include `lydsys info`, `lydsys storage list`, and `lydsys storage status`. The `/ark` layout uses `Containers`, `Media`, `Share`, and `Configs`; it does not relocate Podman's graph root or migrate existing data.
+Run `sudo lydsys` after installation. The `lydhelp` command is included by default and provides topic-based terminal help for files, folders, search, permissions, storage, processes, networking, packages and archives. It offers optional configuration tasks for system updates, KDE workstation tools, gaming, Btrfs mount options, Snapper, Flatpak, Podman, TuneD, Cockpit, SSH, Tailscale, virtualization, legacy Intel VA-API, automatic APT updates, removing KDE to make a desktop install headless, and creating the Ark-style `/ark` storage layout with `ark`, `video` and `render` group membership, and adding the optional `woman` alias for `man`. Read-only commands include `lydsys info`, `lydsys storage list`, and `lydsys storage status`. The `/ark` layout uses `Containers`, `Media`, `Share`, and `Configs`; it does not relocate Podman's graph root or migrate existing data.
 
 Tasks are opt-in. The utility does not repartition disks or silently convert filesystem layouts. Snapper setup requires a Btrfs root subvolume and deliberately stops if an existing `/.snapshots` layout needs inspection.
 
