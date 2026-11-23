@@ -106,8 +106,13 @@ if [[ "$ROOT" == "/" ]]; then
   [[ -x /usr/sbin/update-grub ]] || { echo "update-grub is unavailable; install grub2-common first." >&2; exit 1; }
   [[ -f /etc/default/grub ]] || { echo "/etc/default/grub is missing; GRUB may not be installed." >&2; exit 1; }
 
-  BACKUP="/etc/default/grub.lyd-backup-$(date +%Y%m%d-%H%M%S)"
-  cp -a /etc/default/grub "$BACKUP"
+  if grep -Fq 'GRUB_THEME="/boot/grub/themes/lyd-mystical/theme.txt"' /etc/default/grub; then
+    BACKUP=""
+    echo "Mystical GRUB theme is already configured; preserving the original backup."
+  else
+    BACKUP="/etc/default/grub.lyd-backup-$(date +%Y%m%d-%H%M%S)"
+    cp -a /etc/default/grub "$BACKUP"
+  fi
   if ! python3 - /etc/default/grub <<'PY'
 from pathlib import Path
 import sys
@@ -137,7 +142,7 @@ PY
     echo "GRUB configuration failed; restored the previous defaults." >&2
     exit 1
   fi
-  echo "Mystical GRUB theme applied. Previous defaults: $BACKUP"
+  echo "Mystical GRUB theme applied. Previous defaults: ${BACKUP:-existing backup preserved}"
 else
   echo "Mystical GRUB theme staged under $ROOT."
 fi
