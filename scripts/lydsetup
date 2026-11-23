@@ -1,0 +1,238 @@
+#!/usr/bin/env bash
+# lydsetup - interactive post-install setup manager for lyd Debian systems.
+set -Eeuo pipefail
+
+APP_NAME="lydsetup"
+VERSION="0.1.0"
+CONFIG_DIR="$HOME/.config/lydsetup"
+PROFILE_DIR="$CONFIG_DIR/profiles"
+mkdir -p "$PROFILE_DIR"
+LOG_FILE="$PROFILE_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
+declare -a SELECTED=()
+
+log() { printf '[%s] %s\n' "$(date '+%F %T')" "$*" | tee -a "$LOG_FILE"; }
+msg() { whiptail --title "$APP_NAME $VERSION" --msgbox "$1" 14 80; }
+confirm() { whiptail --title "$APP_NAME $VERSION" --yesno "$1" 14 80; }
+has() { command -v "$1" >/dev/null 2>&1; }
+die() { log "ERROR: $*"; printf '%s\n' "$*" >&2; exit 1; }
+install_pkgs() {
+  (($#)) || return 0
+  log "Installing packages: $*"
+  sudo apt-get install -y "$@" 2>&1 | tee -a "$LOG_FILE"
+}
+enable_service() {
+  log "Enabling service: $1"
+  sudo systemctl enable --now "$1" 2>&1 | tee -a "$LOG_FILE"
+}
+run_lydsys() {
+  if ! has lydsys; then
+    msg "lydsys is not installed. This task requires the Debian system manager included with this image."
+    return 1
+  fi
+  sudo lydsys run "$1" 2>&1 | tee -a "$LOG_FILE"
+}
+
+preflight() {
+  [[ $EUID -ne 0 ]] || die "Run lydsetup as your normal user, not with sudo."
+  [[ -r /etc/os-release ]] || die "Cannot identify this operating system."
+  . /etc/os-release
+  [[ "${ID:-}" == debian && "${VERSION_ID:-}" == 13 ]] || die "This version targets Debian 13 (Trixie). Detected: ${PRETTY_NAME:-unknown}."
+  has whiptail || die "whiptail is missing. Install it with: sudo apt install whiptail"
+  has sudo || die "sudo is required."
+  sudo -v
+}
+
+task_update() {
+  sudo apt-get update 2>&1 | tee -a "$LOG_FILE"
+  sudo apt-get full-upgrade -y 2>&1 | tee -a "$LOG_FILE"
+  sudo apt-get autoremove --purge -y 2>&1 | tee -a "$LOG_FILE"
+}
+
+task_desktop() {
+  install_pkgs dolphin konsole kate ark okular kde-spectacle kcalc ffmpeg
+}
+
+task_gaming() {
+  msg "Installs general Linux gaming performance and monitoring utilities: GameMode, MangoHud, vkBasalt and Vulkan tools. It does not install game stores, games, or configure third-party repositories. No overclocking, global CPU governor changes or kernel tuning is performed."
+  install_pkgs gamemode mangohud vkbasalt mesa-vulkan-drivers vulkan-tools
+  local conf="$HOME/.config/MangoHud/MangoHud.conf"
+  mkdir -p "$(dirname "$conf")"
+  if [[ ! -e "$conf" ]]; then
+    cat > "$conf" <<'MANGOHUD'
+fps
+frametime
+cpu_stats
+gpu_stats
+ram
+vram
+gpu_temp
+cpu_temp
+position=top-left
+toggle_hud=Shift_R+F12
+MANGOHUD
+    log "Created MangoHud configuration at $conf"
+  else
+    log "Existing MangoHud configuration preserved: $conf"
+  fi
+  log "Gaming performance utilities installed. GameMode and MangoHud are opt-in for applications."
+}
+
+task_virtualization() {
+  install_pkgs qemu-system-x86 qemu-utils libvirt-daemon-system libvirt-clients \
+    virt-manager ovmf swtpm virt-viewer
+  enable_service libvirtd.service
+  local user="${SUDO_USER:-$USER}"
+  if id "$user" >/dev/null 2>&1; then
+    sudo usermod -aG libvirt,kvm "$user"
+    log "Added $user to libvirt and kvm groups; a new login is required."
+  fi
+  if has virsh && sudo virsh net-list --all 2>/dev/null | awk 'NR>2 {print $1}' | grep -qx default; then
+    sudo virsh net-autostart default 2>&1 | tee -a "$LOG_FILE" || true
+    sudo virsh net-start default 2>&1 | tee -a "$LOG_FILE" || true
+  else
+    log "The libvirt default network was not found. No network was created automatically."
+  fi
+}
+
+task_flatpak() {
+  install_pkgs flatpak plasma-discover-backend-flatpak
+  sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  log "Flatpak and the Flathub remote are configured."
+}
+
+task_podman() {
+  install_pkgs podman podman-compose uidmap slirp4netns fuse-overlayfs
+  log "Podman installed. Rootless use requires valid subordinate UID/GID ranges."
+}
+
+task_tuned() {
+  install_pkgs tuned tuned-ppd
+  enable_service tuned.service
+}
+
+task_cockpit() {
+  install_pkgs cockpit
+  enable_service cockpit.socket
+  log "Cockpit is normally available at https://<hostname>:9090."
+}
+
+task_ssh() {
+  install_pkgs openssh-server
+  enable_service ssh.service
+}
+
+task_tailscale() {
+  msg "This uses Tailscale's official Debian installation method. Review the upstream installer before continuing."
+  confirm "Continue with Tailscale installation?" || return 0
+  install_pkgs curl ca-certificates
+  curl -fsSL https://tailscale.com/install.sh | sudo bash 2>&1 | tee -a "$LOG_FILE"
+  enable_service tailscaled.service
+  log "Tailscale installed. Device authentication is a separate step."
+}
+
+task_snapper() { run_lydsys 5; }
+task_btrfs() { run_lydsys 4; }
+task_nvidia() {
+  msg "This option uses Debian 13's packaged NVIDIA driver. Your APT sources must already include contrib and non-free components."
+  confirm "Continue with the Debian-packaged NVIDIA driver installation?" || return 0
+  sudo apt-get update 2>&1 | tee -a "$LOG_FILE"
+  install_pkgs linux-headers-amd64 dkms nvidia-driver nvidia-kernel-dkms nvidia-settings
+}
+
+task_headless() {
+  msg "This is a destructive desktop-to-headless conversion. It removes KDE/SDDM packages and changes the default boot target. Do not run it over a remote session unless SSH access is verified."
+  confirm "Simulate the KDE/SDDM package removal first?" || return 0
+  sudo apt-get -s purge task-kde-desktop sddm plasma-desktop 2>&1 | tee -a "$LOG_FILE" || true
+  confirm "Proceed with removing KDE/SDDM? Review the simulation in the log before accepting." || return 0
+  sudo systemctl set-default multi-user.target
+  sudo systemctl disable sddm.service 2>/dev/null || true
+  sudo apt-get purge -y task-kde-desktop sddm plasma-desktop 2>&1 | tee -a "$LOG_FILE"
+  sudo apt-get autoremove --purge -y 2>&1 | tee -a "$LOG_FILE"
+  log "Headless conversion finished. Review the APT transaction before rebooting."
+}
+
+declare -A LABELS=(
+  [update]="Update and upgrade Debian"
+  [desktop]="Install additional KDE desktop tools"
+  [gaming]="Install gaming performance utilities"
+  [virtualization]="Install QEMU/KVM and Virtual Machine Manager"
+  [flatpak]="Install Flatpak and configure Flathub"
+  [podman]="Install Podman and Compose"
+  [tuned]="Install and enable TuneD"
+  [cockpit]="Install and enable Cockpit"
+  [ssh]="Install and enable OpenSSH server"
+  [tailscale]="Install Tailscale"
+  [snapper]="Configure Snapper for Btrfs root"
+  [btrfs]="Configure Btrfs root mount options"
+  [nvidia]="Install Debian-packaged NVIDIA driver"
+  [headless]="Convert KDE installation to headless"
+)
+
+run_task() {
+  case "$1" in
+    update) task_update ;;
+    desktop) task_desktop ;;
+    gaming) task_gaming ;;
+    virtualization) task_virtualization ;;
+    flatpak) task_flatpak ;;
+    podman) task_podman ;;
+    tuned) task_tuned ;;
+    cockpit) task_cockpit ;;
+    ssh) task_ssh ;;
+    tailscale) task_tailscale ;;
+    snapper) task_snapper ;;
+    btrfs) task_btrfs ;;
+    nvidia) task_nvidia ;;
+    headless) task_headless ;;
+    *) die "Unknown task: $1" ;;
+  esac
+}
+
+main() {
+  case "${1:-}" in
+    --help|-h|help)
+      cat <<HELP
+lydsetup $VERSION
+Interactive Debian 13 post-install setup manager.
+
+Usage:
+  lydsetup          Open the interactive task selector
+  lydsetup --help   Show this help
+  lydsetup --version
+Logs and profiles: $PROFILE_DIR
+HELP
+      return ;;
+    --version|-V) printf 'lydsetup %s\n' "$VERSION"; return ;;
+    "") ;;
+    *) die "Unknown argument. Use --help." ;;
+  esac
+
+  preflight
+  log "===== $APP_NAME $VERSION started ====="
+  log "Detected: $(. /etc/os-release; printf '%s' "$PRETTY_NAME")"
+  local -a opts=()
+  local id
+  for id in update desktop gaming virtualization flatpak podman tuned cockpit ssh tailscale snapper btrfs nvidia headless; do
+    opts+=("$id" "${LABELS[$id]}" OFF)
+  done
+  mapfile -t SELECTED < <(whiptail --title "$APP_NAME $VERSION" --checklist \
+    "Choose optional tasks. Review each confirmation and APT transaction.\n\nLog: $LOG_FILE" \
+    24 92 16 --separate-output "${opts[@]}" 3>&1 1>&2 2>&3) || true
+  (("${#SELECTED[@]}" > 0)) || { msg "No tasks selected. Log: $LOG_FILE"; return 0; }
+  msg "Selected tasks:\n\n$(printf '%s\n' "${SELECTED[@]}")\n\nLog: $LOG_FILE"
+  confirm "Apply the selected tasks now?" || return 0
+
+  for id in "${SELECTED[@]}"; do
+    log "----- Starting: ${LABELS[$id]} -----"
+    if run_task "$id"; then
+      log "Completed: ${LABELS[$id]}"
+    else
+      log "FAILED or skipped: ${LABELS[$id]}"
+      msg "Task '$id' did not complete successfully. Review $LOG_FILE before continuing."
+    fi
+  done
+  log "===== Setup run completed ====="
+  msg "lydsetup finished. Review the log at:\n$LOG_FILE"
+}
+
+main "$@"
