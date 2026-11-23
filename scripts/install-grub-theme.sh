@@ -58,8 +58,8 @@ else
   mkdir -p "$WORK/mystical"
   cp "$SOURCE" "$WORK/mystical/background.svg"
   rsvg-convert -w 1920 -h 1080 -o "$WORK/mystical/background.png" "$SOURCE"
-  grub-mkfont --name="DejaVu Sans" --size=24 --output="$WORK/mystical/title.pf2" "$FONT"
-  grub-mkfont --name="DejaVu Sans" --size=18 --output="$WORK/mystical/menu.pf2" "$FONT"
+  grub-mkfont --name="DejaVu Sans Regular 24" --size=24 --output="$WORK/mystical/title.pf2" "$FONT"
+  grub-mkfont --name="DejaVu Sans Regular 18" --size=18 --output="$WORK/mystical/menu.pf2" "$FONT"
   cat > "$WORK/mystical/theme.txt" <<'THEME'
 title-text: "LYD DEBIAN"
 title-font: "DejaVu Sans Regular 24"
