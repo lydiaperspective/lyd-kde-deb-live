@@ -12,7 +12,7 @@ dolphin
 ark
 kate
 okular
-spectacle
+kde-spectacle
 partitionmanager
 kde-config-sddm
 breeze-gtk-theme
@@ -45,7 +45,6 @@ whiptail
 python3
 bash-completion
 zsh
-zsh-completions
 rsync
 rclone
 unzip
