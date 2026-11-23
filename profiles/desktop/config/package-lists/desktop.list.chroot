@@ -60,14 +60,6 @@ firmware-misc-nonfree
 mesa-va-drivers
 vainfo
 ffmpeg
-gamemode
-mangohud
-vkbasalt
-qemu-system-x86
-qemu-utils
-libvirt-daemon-system
-libvirt-clients
-virt-manager
 podman
 podman-compose
 btrfs-progs
