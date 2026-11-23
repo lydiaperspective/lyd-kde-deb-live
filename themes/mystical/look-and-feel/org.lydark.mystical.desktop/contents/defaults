@@ -7,7 +7,7 @@ LookAndFeelPackage=org.lydark.mystical.desktop
 widgetStyle=Breeze
 
 [kdeglobals][Icons]
-Theme=Breeze
+Theme=Mystical
 
 [plasmarc][Wallpaper]
 defaultWallpaperTheme=org.lydark.mystical.wallpaper

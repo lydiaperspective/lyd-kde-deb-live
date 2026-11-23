@@ -56,6 +56,14 @@ copy_tree "$SOURCE/plasma-style/org.lydark.mystical.desktop" \
 copy_tree "$SOURCE/wallpaper" \
   /usr/share/wallpapers/org.lydark.mystical.wallpaper
 
+# Generate and install the scalable Mystical icon theme. Breeze remains the
+# fallback for icons that do not yet have original Mystical artwork.
+python3 "$SOURCE/build-icon-theme.py" "$SOURCE/icon-theme"
+copy_tree "$SOURCE/icon-theme" /usr/share/icons/Mystical
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  gtk-update-icon-cache -f -t "$(dest /usr/share/icons/Mystical)" || true
+fi
+
 install -d "$(dest /usr/share/lyd/mystical)"
 cp -a "$SOURCE/icons" "$(dest /usr/share/lyd/mystical/)"
 install -m 0644 "$SOURCE/README.md" "$(dest /usr/share/lyd/mystical/README.md)"
@@ -87,7 +95,7 @@ LookAndFeelPackage=org.lydark.mystical.desktop
 widgetStyle=Breeze
 
 [Icons]
-Theme=Breeze
+Theme=Mystical
 EOF
 cat > "$(dest /etc/xdg/plasmarc)" <<'EOF'
 [Theme]
