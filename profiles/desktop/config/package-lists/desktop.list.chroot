@@ -14,7 +14,7 @@ kate
 okular
 spectacle
 partitionmanager
-sddm-kcm
+kde-config-sddm
 network-manager
 network-manager-openvpn
 network-manager-openconnect
@@ -39,6 +39,7 @@ fish
 man-db
 manpages
 whiptail
+python3
 bash-completion
 zsh
 zsh-completions
