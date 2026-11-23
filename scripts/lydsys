@@ -349,7 +349,8 @@ declare -A TASKS=(
   [14]="Enable automatic APT updates"
   [15]="Remove KDE and convert to headless server"
   [16]="Set up Ark-style /ark storage and GPU groups"
-  [17]="Add woman command as a man alias"\n  [18]="Apply the Mystical KDE theme"
+  [17]="Add woman command as a man alias"
+  [18]="Apply the Mystical KDE theme"
 )
 
 run_task() {
@@ -370,7 +371,8 @@ run_task() {
     14) task_auto_updates ;;
     15) task_headless ;;
     16) task_ark_storage ;;
-    17) task_woman ;;\n    18) task_mystical_theme ;;
+    17) task_woman ;;
+    18) task_mystical_theme ;;
     *) die "Unknown task: $1" ;;
   esac
 }
