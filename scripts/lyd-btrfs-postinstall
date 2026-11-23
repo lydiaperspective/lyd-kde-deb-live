@@ -23,6 +23,13 @@ ROOT_DEVICE="$(findfs "$ROOT_SPEC" 2>/dev/null || true)"
 ROOT_UUID="$(blkid -s UUID -o value "$ROOT_DEVICE")"
 [[ -n "$ROOT_UUID" ]] || fail "Could not read the Btrfs filesystem UUID."
 
+# Snapper must manage a named root subvolume, not the Btrfs top-level tree.
+# Debian Installer normally mounts its root as @rootfs. Refuse a top-level
+# root rather than creating snapshots in a layout that cannot be rolled back.
+ROOT_FSROOT="$(findmnt -n -o FSROOT /)"
+[[ -n "$ROOT_FSROOT" && "$ROOT_FSROOT" != "/" ]] || \
+  fail "The root filesystem is mounted from the Btrfs top-level tree, not a named subvolume. Expected a layout such as @rootfs; no changes made."
+
 TOP_MOUNT=/run/lyd-btrfs-top
 mkdir -p "$TOP_MOUNT"
 mount -t btrfs -o subvolid=5 "$ROOT_DEVICE" "$TOP_MOUNT"
