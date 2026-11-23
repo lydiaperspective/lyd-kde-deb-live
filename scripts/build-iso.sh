@@ -30,6 +30,8 @@ command -v lb >/dev/null || {
 mkdir -p "$PROFILE_DIR/config/includes.chroot/usr/local/sbin"
 install -m 0755 "$ROOT_DIR/scripts/lydsys" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/sbin/lydsys"
+install -m 0755 "$ROOT_DIR/scripts/lydsetup" \
+  "$PROFILE_DIR/config/includes.chroot/usr/local/bin/lydsetup"
 install -m 0755 "$ROOT_DIR/scripts/lydhelp" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/bin/lydhelp"
 install -m 0755 "$ROOT_DIR/scripts/lyd-btrfs-postinstall" \
