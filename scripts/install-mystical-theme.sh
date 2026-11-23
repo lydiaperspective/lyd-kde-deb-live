@@ -34,7 +34,7 @@ SOURCE="$(realpath -e "$SOURCE")"
 dest() {
   local relative="${1#/}"
   if [[ "$ROOT" == "/" ]]; then
-    printf '/ %s' "$relative" | tr -d ' '
+    printf '/%s' "$relative"
   else
     printf '%s/%s' "$ROOT" "$relative"
   fi
