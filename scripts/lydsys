@@ -78,6 +78,7 @@ task_mystical_theme() {
   else
     warn "The global-theme helper could not apply the package in this shell context."
     if have kwriteconfig6; then
+      install -d "$target_home/.config"
       kwriteconfig6 --file "$target_home/.config/kdeglobals" --group General --key ColorScheme Mystical
       kwriteconfig6 --file "$target_home/.config/plasmarc" --group Theme --key name org.lydark.mystical.desktop
       kwriteconfig6 --file "$target_home/.config/ksplashrc" --group KSplash --key Theme org.lydark.mystical.desktop
