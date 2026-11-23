@@ -21,6 +21,7 @@ fish
 man-db
 manpages
 whiptail
+python3
 bash-completion
 zsh
 zsh-completions
