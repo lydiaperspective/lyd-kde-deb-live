@@ -36,7 +36,8 @@ jobs:
 
       - name: Validate shell scripts
         run: |
-          bash -n scripts/lydsys scripts/build-iso.sh
+          bash -n scripts/lydsys
+          bash -n scripts/build-iso.sh
           sh -n profiles/desktop/auto/config
           sh -n profiles/server/auto/config
 
