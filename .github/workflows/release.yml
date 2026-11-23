@@ -25,7 +25,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            git ca-certificates make live-build debootstrap squashfs-tools xorriso \
+            git ca-certificates make python3 live-build debootstrap squashfs-tools xorriso \
             isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin \
             mtools dosfstools rsync grub-common librsvg2-bin fonts-dejavu-core
 
