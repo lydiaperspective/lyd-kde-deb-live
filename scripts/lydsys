@@ -93,6 +93,15 @@ task_mystical_theme() {
   info "Breeze widget geometry, icons and cursor remain in place for compatibility."
 }
 
+task_grub_theme() {
+  local helper="/usr/local/lib/lyd/install-grub-theme.sh"
+  [[ -x "$helper" ]] || {
+    warn "The Mystical GRUB theme helper is not installed on this system."
+    return 1
+  }
+  "$helper"
+}
+
 task_gaming() {
   apt_install gamemode mangohud vkbasalt mesa-vulkan-drivers mesa-va-drivers \
     vulkan-tools
@@ -351,6 +360,7 @@ declare -A TASKS=(
   [16]="Set up Ark-style /ark storage and GPU groups"
   [17]="Add woman command as a man alias"
   [18]="Apply the Mystical KDE theme"
+  [19]="Apply the Mystical GRUB boot theme"
 )
 
 run_task() {
@@ -373,6 +383,7 @@ run_task() {
     16) task_ark_storage ;;
     17) task_woman ;;
     18) task_mystical_theme ;;
+    19) task_grub_theme ;;
     *) die "Unknown task: $1" ;;
   esac
 }
@@ -476,13 +487,13 @@ EOF
   fi
   while true; do
     local choices=()
-    for n in $(seq 1 18); do
+    for n in $(seq 1 19); do
       choices+=("$n" "${TASKS[$n]}")
     done
     local choice
     choice="$(whiptail --title "lydsys $VERSION" --menu \
       "Select an optional system configuration task. Changes are logged to $LOG_FILE." \
-      26 96 18 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
+      28 96 19 "${choices[@]}" 3>&1 1>&2 2>&3)" || break
     clear
     if run_task "$choice"; then
       info "Task completed: ${TASKS[$choice]}"
