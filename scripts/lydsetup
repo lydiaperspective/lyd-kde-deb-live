@@ -5,10 +5,12 @@ set -Eeuo pipefail
 APP_NAME="lydsetup"
 VERSION="0.1.0"
 CONFIG_DIR="$HOME/.config/lydsetup"
-PROFILE_DIR="$CONFIG_DIR/logs"
-mkdir -p "$PROFILE_DIR"
-LOG_FILE="$PROFILE_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
-declare -a SELECTED=()
+PROFILE_DIR="$CONFIG_DIR/profiles"
+LOG_DIR="$CONFIG_DIR/logs"
+mkdir -p "$PROFILE_DIR" "$LOG_DIR"
+LOG_FILE="$LOG_DIR/lydsetup-$(date +%Y%m%d-%H%M%S).log"
+declare -a SELECTED=() PROFILE_SELECTED=()
+LOADED_PROFILE=""
 
 log() { printf '[%s] %s\n' "$(date '+%F %T')" "$*" | tee -a "$LOG_FILE"; }
 msg() { whiptail --title "$APP_NAME $VERSION" --msgbox "$1" 14 80; }
@@ -151,6 +153,44 @@ task_headless() {
   log "Headless conversion finished. Review the APT transaction before rebooting."
 }
 
+contains() {
+  local wanted="$1" item
+  shift
+  for item in "$@"; do [[ "$item" == "$wanted" ]] && return 0; done
+  return 1
+}
+state_for() {
+  if contains "$1" "${PROFILE_SELECTED[@]}"; then printf ON; else printf OFF; fi
+}
+load_profile() {
+  local line value
+  PROFILE_SELECTED=()
+  while IFS= read -r line; do
+    case "$line" in selected=*) value="${line#selected=}"; IFS=, read -r -a PROFILE_SELECTED <<< "$value" ;; esac
+  done < "$1"
+  LOADED_PROFILE="$(basename "$1" .conf)"
+  log "Loaded profile: $LOADED_PROFILE"
+}
+choose_profile() {
+  local -a choices=("fresh" "Start with all tasks unchecked") files=()
+  local file name choice
+  mapfile -t files < <(find "$PROFILE_DIR" -maxdepth 1 -type f -name "*.conf" -printf "%f\n" | sort)
+  for file in "${files[@]}"; do name="${file%.conf}"; choices+=("$name" "Saved task selections"); done
+  choice="$(whiptail --title "$APP_NAME $VERSION" --menu "Choose a starting profile:" 20 82 12 "${choices[@]}" 3>&1 1>&2 2>&3)" || return 0
+  [[ "$choice" == fresh ]] && return 0
+  [[ -f "$PROFILE_DIR/$choice.conf" ]] && load_profile "$PROFILE_DIR/$choice.conf"
+}
+save_profile() {
+  local name file
+  confirm "Save these task selections as a reusable profile?" || return 0
+  name="$(whiptail --title "$APP_NAME $VERSION" --inputbox "Profile name (letters, numbers, dash and underscore):" 10 72 "$LOADED_PROFILE" 3>&1 1>&2 2>&3)" || return 0
+  [[ "$name" =~ ^[A-Za-z0-9_-]{1,40}$ ]] || { msg "Invalid profile name."; return 0; }
+  file="$PROFILE_DIR/$name.conf"
+  [[ ! -e "$file" ]] || confirm "Overwrite the existing profile $name?" || return 0
+  { printf "# lydsetup profile\nversion=1\nselected="; local IFS=,; printf "%s\n" "${SELECTED[*]}"; } > "$file"
+  chmod 600 "$file"
+  log "Saved profile: $file"
+}
 declare -A LABELS=(
   [update]="Update and upgrade Debian"
   [desktop]="Install additional KDE desktop tools"
@@ -199,7 +239,8 @@ Usage:
   lydsetup          Open the interactive task selector
   lydsetup --help   Show this help
   lydsetup --version
-Logs and profiles: $PROFILE_DIR
+Profiles: $PROFILE_DIR
+Logs: $LOG_DIR
 HELP
       return ;;
     --version|-V) printf 'lydsetup %s\n' "$VERSION"; return ;;
@@ -210,10 +251,11 @@ HELP
   preflight
   log "===== $APP_NAME $VERSION started ====="
   log "Detected: $(. /etc/os-release; printf '%s' "$PRETTY_NAME")"
+  choose_profile
   local -a opts=()
   local id
   for id in update desktop gaming virtualization flatpak podman tuned cockpit ssh tailscale snapper btrfs nvidia headless; do
-    opts+=("$id" "${LABELS[$id]}" OFF)
+    opts+=("$id" "${LABELS[$id]}" "$(state_for "$id")")
   done
   mapfile -t SELECTED < <(whiptail --title "$APP_NAME $VERSION" --checklist \
     "Choose optional tasks. Review each confirmation and APT transaction.\n\nLog: $LOG_FILE" \
@@ -231,6 +273,7 @@ HELP
       msg "Task '$id' did not complete successfully. Review $LOG_FILE before continuing."
     fi
   done
+  save_profile
   log "===== Setup run completed ====="
   msg "lydsetup finished. Review the log at:\n$LOG_FILE"
 }
