@@ -102,7 +102,7 @@ scripts/lydsetup         interactive post-install setup manager
 Configuration and scripts in this repository are provided under the MIT License. Debian packages, artwork and other third-party components remain under their respective licenses.
 
 
-## Install the lyd profile on an existing Debian system
+## Installation guide\n\nFor a complete walkthrough covering installation from the custom ISO, manual Debian 13 partitioning, the expected `@rootfs` Btrfs layout, Snapper and GRUB snapshot integration, and the Mystical desktop theme, see [docs/INSTALLATION-GUIDE.md](docs/INSTALLATION-GUIDE.md). The guide also explains how to apply the desktop or server profile to an existing Debian 13 installation and how to verify the result.\n\n## Install the lyd profile on an existing Debian system
 
 You can apply either profile to an existing **Debian 13 (Trixie) amd64** installation without booting or reinstalling from the ISO. Clone the repository, then run the installer as root:
 
