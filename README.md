@@ -55,7 +55,7 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 - OpenSSH server, Podman, Cockpit, tuned, btrfs-progs, Snapper, GRUB snapshot integration and common administration tools
 - The Mystical GRUB theme assets and installer helper, without adding desktop packages
 - `lydsys`
-- The same guided UEFI/GPT Btrfs installation layout and post-install `@home`/Snapper setup as the desktop image
+- The same guided UEFI/GPT Btrfs installation layout, `@home`/`@var` subvolumes, Snapper setup and GRUB snapshot integration as the desktop image
 
 ### lydsys and lydsetup
 
