@@ -41,9 +41,6 @@ jobs:
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/bin/lydhelp"
           install -D -m 0755 scripts/lyd-btrfs-postinstall \
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lyd-btrfs-postinstall"
-          bash scripts/install-grub-theme.sh \
-            --root "profiles/${{ matrix.profile }}/config/includes.chroot" \
-            --source "$GITHUB_WORKSPACE/themes/mystical/wallpaper/contents/images/1920x1080.svg"
           if [ "${{ matrix.profile }}" = "desktop" ]; then
             bash scripts/install-grub-theme.sh \
               --root "profiles/desktop/config/includes.chroot" \
@@ -54,11 +51,16 @@ jobs:
             bash scripts/install-mystical-theme.sh \
               --root "profiles/desktop/config/includes.chroot" \
               --source "$GITHUB_WORKSPACE/themes/mystical"
+          else
+            bash scripts/install-grub-theme.sh \
+              --root "profiles/server/config/includes.chroot" \
+              --source "$GITHUB_WORKSPACE/themes/mystical/wallpaper/contents/images/1920x1080.svg"
           fi
 
       - name: Validate shell scripts
         run: |
           bash -n scripts/lydsys
+          bash -n scripts/lydsetup
           bash -n scripts/lydhelp
           bash -n scripts/lyd-btrfs-postinstall
           bash -n scripts/install-mystical-theme.sh
