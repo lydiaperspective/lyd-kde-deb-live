@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install lyd (Text Installer)
+GenericName=Text-based System Installer
+Comment=Launch the Debian Installer in its terminal-based interface
+Exec=debian-installer-launcher --text
+Icon=system-software-install
+Terminal=false
+Categories=System;Settings;
+Keywords=install;installer;text;terminal;debian;
+StartupNotify=false
