@@ -11,10 +11,7 @@ on:
         description: Image profile to build
         required: true
         type: choice
-        options:
-          - both
-          - desktop
-          - server
+        options: [both, desktop, server]
         default: both
   schedule:
     - cron: "17 4 * * 0"
@@ -28,15 +25,13 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.profile == 'both' || inputs.profile == matrix.profile }}
     name: Build ${{ matrix.profile }} ISO
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         profile: [desktop, server]
-        exclude:
-          - profile: ${{ github.event_name == 'workflow_dispatch' && inputs.profile == 'desktop' && 'server' || '__none__' }}
-          - profile: ${{ github.event_name == 'workflow_dispatch' && inputs.profile == 'server' && 'desktop' || '__none__' }}
 
     steps:
       - name: Check out repository
