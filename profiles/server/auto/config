@@ -1,10 +1,16 @@
 #!/bin/sh
 set -eu
 
+# Keep Debian mirror URLs free of a trailing slash. live-build appends "/dists/..."
+# directly when looking up Contents-amd64.gz; a trailing slash creates a // path
+# that some Debian CDN edges return as 404.
 lb config noauto \
   --mode debian \
   --distribution trixie \
   --architecture amd64 \
+  --mirror-bootstrap "http://deb.debian.org/debian" \
+  --mirror-chroot "http://deb.debian.org/debian" \
+  --mirror-binary "http://deb.debian.org/debian" \
   --binary-image iso-hybrid \
   --debian-installer live \
   --debian-installer-gui true \
