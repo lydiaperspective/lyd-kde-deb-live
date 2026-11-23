@@ -37,6 +37,13 @@ install -m 0755 "$ROOT_DIR/scripts/lydhelp" \
 install -m 0755 "$ROOT_DIR/scripts/lyd-btrfs-postinstall" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/sbin/lyd-btrfs-postinstall"
 
+bash "$ROOT_DIR/scripts/install-grub-theme.sh" \
+  --root "$PROFILE_DIR/config/includes.chroot" \
+  --source "$ROOT_DIR/themes/mystical/wallpaper/contents/images/1920x1080.svg" \
+  --iso-output "$PROFILE_DIR/config/includes.binary/boot/grub/themes"
+install -D -m 0755 "$ROOT_DIR/scripts/9999-grub-theme.hook.binary" \
+  "$PROFILE_DIR/config/hooks/live/9999-grub-theme.hook.binary"
+
 if [[ "$PROFILE" == "desktop" ]]; then
   bash "$ROOT_DIR/scripts/install-mystical-theme.sh" \
     --root "$PROFILE_DIR/config/includes.chroot" \
