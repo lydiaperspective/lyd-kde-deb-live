@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+
+lb config noauto \
+  --mode debian \
+  --distribution trixie \
+  --architectures amd64 \
+  --binary-images iso-hybrid \
+  --debian-installer live \
+  --archive-areas "main contrib non-free non-free-firmware" \
+  --apt-recommends true \
+  --apt-secure true \
+  --updates true \
+  --security true \
+  --firmware-binary true \
+  --firmware-chroot true \
+  --iso-application "lyd KDE Debian Live Server" \
+  --iso-publisher "lyd KDE Debian Live" \
+  --iso-volume "LYD-DEB-SERVER" \
+  --bootappend-live "boot=live components username=live hostname=lyd-server" \
+  --memtest none
