@@ -27,11 +27,16 @@ enable_service() {
   sudo systemctl enable --now "$1" 2>&1 | tee -a "$LOG_FILE"
 }
 run_lydsys() {
-  if ! has lydsys; then
+  local helper
+  helper="$(command -v lydsys || true)"
+  if [[ -z "$helper" && -x /usr/local/sbin/lydsys ]]; then
+    helper=/usr/local/sbin/lydsys
+  fi
+  if [[ -z "$helper" || ! -x "$helper" ]]; then
     msg "lydsys is not installed. This task requires the Debian system manager included with this image."
     return 1
   fi
-  sudo lydsys run "$1" 2>&1 | tee -a "$LOG_FILE"
+  sudo "$helper" run "$1" 2>&1 | tee -a "$LOG_FILE"
 }
 
 preflight() {
