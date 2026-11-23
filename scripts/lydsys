@@ -393,13 +393,20 @@ task_cleanup_desktop() {
 }
 
 task_headless() {
-  if ! dpkg-query -W -f='${Status}' task-kde-desktop 2>/dev/null | grep -q 'install ok installed'; then
-    warn "KDE task package not detected. No desktop removal performed."
+  local found=0 pkg
+  for pkg in task-kde-desktop kde-plasma-desktop plasma-desktop sddm; do
+    if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q 'install ok installed'; then
+      found=1
+      break
+    fi
+  done
+  if (( found == 0 )); then
+    warn "KDE Plasma packages not detected. No desktop removal performed."
     return 1
   fi
   warn "This removes KDE Plasma and SDDM from this installation."
   confirm "Continue with headless conversion?" || return 0
-  apt-get purge -y task-kde-desktop kde-plasma-desktop plasma-desktop sddm
+  apt-get purge -y task-kde-desktop kde-plasma-desktop kde-standard plasma-desktop sddm
   apt-get autoremove --purge -y
   systemctl set-default multi-user.target
   info "Desktop packages removed. Reboot when ready."
