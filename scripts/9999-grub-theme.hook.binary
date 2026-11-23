@@ -1,25 +1,30 @@
 #!/bin/sh
 # Apply the Mystical theme to the desktop ISO's UEFI GRUB menu.
+# live-build executes binary hooks with the working directory set to binary/.
 set -eu
 
-GRUB_CFG="binary/boot/grub/grub.cfg"
-THEME_DIR="binary/boot/grub/themes/lyd-mystical"
+GRUB_CFG="boot/grub/grub.cfg"
+THEME_DIR="boot/grub/themes/lyd-mystical"
 
 if [ ! -f "$GRUB_CFG" ]; then
-  echo "GRUB binary configuration not found at $GRUB_CFG; leaving the BIOS Syslinux menu unchanged."
-  exit 0
-fi
-[ -f "$THEME_DIR/theme.txt" ] || {
-  echo "Mystical GRUB theme assets are missing from $THEME_DIR" >&2
+  echo "ERROR: GRUB configuration not found at $GRUB_CFG (binary hook working directory: $(pwd))." >&2
+  echo "Available GRUB configuration files:" >&2
+  find boot -maxdepth 4 -type f \( -name 'grub.cfg' -o -name 'config.cfg' \) -print 2>/dev/null >&2 || true
   exit 1
-}
+fi
+
+if [ ! -f "$THEME_DIR/theme.txt" ]; then
+  echo "ERROR: Mystical GRUB theme assets are missing from $THEME_DIR" >&2
+  exit 1
+fi
 
 if grep -q 'lyd-mystical/theme.txt' "$GRUB_CFG"; then
-  echo "Mystical GRUB theme already configured."
+  echo "Mystical theme already configured in $GRUB_CFG."
   exit 0
 fi
 
 tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
 cat > "$tmp" <<'GRUB'
 # lyd Mystical graphical boot menu
 if insmod gfxterm && insmod png && loadfont "$prefix/themes/lyd-mystical/title.pf2"; then
@@ -31,5 +36,4 @@ fi
 GRUB
 cat "$GRUB_CFG" >> "$tmp"
 cat "$tmp" > "$GRUB_CFG"
-rm -f "$tmp"
 echo "Mystical theme enabled in $GRUB_CFG"
