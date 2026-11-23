@@ -1,0 +1,84 @@
+name: Build Debian Live ISOs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Image profile to build
+        required: true
+        type: choice
+        options:
+          - both
+          - desktop
+          - server
+        default: both
+  schedule:
+    - cron: "17 4 * * 0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.profile }} ISO
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [desktop, server]
+        exclude:
+          - profile: ${{ github.event_name == 'workflow_dispatch' && inputs.profile == 'desktop' && 'server' || '__none__' }}
+          - profile: ${{ github.event_name == 'workflow_dispatch' && inputs.profile == 'server' && 'desktop' || '__none__' }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install live-build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            live-build debootstrap squashfs-tools xorriso \
+            isolinux syslinux-common grub-pc-bin grub-efi-amd64-bin \
+            mtools dosfstools rsync
+
+      - name: Prepare lydsys include
+        run: |
+          install -D -m 0755 scripts/lydsys \
+            "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lydsys"
+
+      - name: Build ISO
+        working-directory: profiles/${{ matrix.profile }}
+        run: |
+          sudo lb clean --purge
+          sudo lb config
+          sudo lb build
+
+      - name: Generate checksum and build metadata
+        working-directory: profiles/${{ matrix.profile }}
+        run: |
+          ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)"
+          test -n "$ISO"
+          sha256sum "$ISO" > "$ISO.sha256"
+          printf 'profile=%s\ncommit=%s\nbuild_date=%s\n' \
+            "${{ matrix.profile }}" "${{ github.sha }}" "$(date -u +%FT%TZ)" \
+            > build-info.txt
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyd-debian-${{ matrix.profile }}-${{ github.sha }}
+          path: |
+            profiles/${{ matrix.profile }}/*.iso
+            profiles/${{ matrix.profile }}/*.iso.sha256
+            profiles/${{ matrix.profile }}/build-info.txt
+          if-no-files-found: error
+          retention-days: 14
