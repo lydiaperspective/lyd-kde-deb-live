@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Complete the default lyd Btrfs layout from inside the installed target.
+set -Eeuo pipefail
+
+LOG_FILE=/var/log/lyd-btrfs-postinstall.log
+mkdir -p /var/log
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+log() { printf '[lyd-btrfs] %s\n' "$*"; }
+fail() { log "ERROR: $*"; exit 1; }
+
+[[ $EUID -eq 0 ]] || fail "Must run as root."
+command -v btrfs >/dev/null 2>&1 || fail "btrfs-progs is not installed."
+command -v findfs >/dev/null 2>&1 || fail "findfs is unavailable."
+
+ROOT_SPEC="$(awk '$1 !~ /^#/ && $2 == "/" && $3 == "btrfs" { print $1; exit }' /etc/fstab)"
+[[ -n "$ROOT_SPEC" ]] || fail "No Btrfs root entry found in /etc/fstab."
+
+ROOT_DEVICE="$(findfs "$ROOT_SPEC" 2>/dev/null || true)"
+[[ -b "$ROOT_DEVICE" ]] || fail "Could not resolve Btrfs root device from $ROOT_SPEC."
+
+if awk '$1 !~ /^#/ && $2 == "/home" { found=1 } END { exit !found }' /etc/fstab; then
+  log "An existing /home mount is configured; preserving it."
+else
+  TOP_MOUNT=/run/lyd-btrfs-top
+  mkdir -p "$TOP_MOUNT"
+  mount -t btrfs -o subvolid=5 "$ROOT_DEVICE" "$TOP_MOUNT"
+  cleanup() {
+    mountpoint -q "$TOP_MOUNT" && umount "$TOP_MOUNT"
+  }
+  trap cleanup EXIT
+
+  if btrfs subvolume show "$TOP_MOUNT/@home" >/dev/null 2>&1; then
+    log "@home already exists; preserving it."
+  else
+    btrfs subvolume create "$TOP_MOUNT/@home"
+    if [[ -d /home ]]; then
+      cp -a /home/. "$TOP_MOUNT/@home/"
+    fi
+    log "Created @home and copied the installed /home contents."
+  fi
+
+  umount "$TOP_MOUNT"
+  trap - EXIT
+
+  ROOT_UUID="$(blkid -s UUID -o value "$ROOT_DEVICE")"
+  [[ -n "$ROOT_UUID" ]] || fail "Could not read the Btrfs filesystem UUID."
+
+  python3 - "$ROOT_UUID" <<'PY'
+from pathlib import Path
+import sys
+
+uuid = sys.argv[1]
+path = Path("/etc/fstab")
+lines = path.read_text().splitlines()
+root_found = False
+home_found = False
+updated = []
+
+for line in lines:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        updated.append(line)
+        continue
+    fields = line.split()
+    if len(fields) < 4:
+        updated.append(line)
+        continue
+    if fields[1] == "/" and fields[2] == "btrfs":
+        options = [x for x in fields[3].split(",")
+                   if x not in {"atime", "relatime", "strictatime"}]
+        for option in ("noatime", "compress=zstd:3"):
+            if option.split("=")[0] not in {x.split("=")[0] for x in options}:
+                options.append(option)
+        fields[3] = ",".join(options)
+        root_found = True
+        updated.append("\t".join(fields))
+    elif fields[1] == "/home":
+        home_found = True
+        updated.append(line)
+    else:
+        updated.append(line)
+
+if not root_found:
+    raise SystemExit("Could not update Btrfs root mount options.")
+if not home_found:
+    updated.append(
+        f"UUID={uuid}\t/home\tbtrfs\tdefaults,noatime,compress=zstd:3,subvol=@home\t0\t0"
+    )
+path.write_text("\n".join(updated) + "\n")
+PY
+  log "Updated /etc/fstab with noatime, zstd compression and the @home subvolume."
+fi
+
+# Set up Snapper if it is present in the installed image. Keep the install
+# usable if Snapper needs manual attention; its status is recorded in the log.
+if command -v snapper >/dev/null 2>&1; then
+  if [[ ! -e /etc/snapper/configs/root ]]; then
+    if [[ -e /.snapshots ]] || mountpoint -q /.snapshots; then
+      log "Snapper not initialized: /.snapshots already exists; leaving it untouched."
+    else
+      snapper -c root create-config /
+      snapper -c root set-config \
+        TIMELINE_CREATE=yes TIMELINE_CLEANUP=yes NUMBER_CLEANUP=yes \
+        NUMBER_LIMIT=10 NUMBER_LIMIT_IMPORTANT=5 \
+        TIMELINE_LIMIT_HOURLY=10 TIMELINE_LIMIT_DAILY=7 \
+        TIMELINE_LIMIT_WEEKLY=4 TIMELINE_LIMIT_MONTHLY=6 \
+        TIMELINE_LIMIT_YEARLY=2
+      systemctl --root=/ enable snapper-timeline.timer snapper-cleanup.timer
+      log "Snapper root configuration and cleanup timers enabled."
+    fi
+  else
+    log "Existing Snapper root configuration found; preserving it."
+  fi
+else
+  log "Snapper package not found in target; run 'sudo lydsys run 5' after installation."
+fi
+
+log "Btrfs post-install configuration finished."
