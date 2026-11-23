@@ -42,6 +42,7 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 - KDE Plasma desktop task and SDDM
 - Firefox ESR, NetworkManager, firmware, Flatpak and Discover Flatpak support
 - Common utilities, gaming tools and virtualization packages
+- The **Mystical** KDE Global Theme: midnight-plum colour scheme, Plasma panel/widget style, moonlit wallpaper, animated Plasma splash, Breeze-compatible GTK integration, and original lunar/botanical artwork
 - `lydsys` and the `lydhelp` command-line reference
 
 ### Server
@@ -53,7 +54,9 @@ Push a tag such as `v0.1.0` to create a GitHub Release containing both images. R
 
 ### lydsys
 
-Run `sudo lydsys` after installation. The `lydhelp` command is included by default and provides topic-based terminal help for files, folders, search, permissions, storage, processes, networking, packages and archives. It offers optional configuration tasks for system updates, KDE workstation tools, gaming, Btrfs mount options, Snapper, Flatpak, Podman, TuneD, Cockpit, SSH, Tailscale, virtualization, legacy Intel VA-API, automatic APT updates, removing KDE to make a desktop install headless, and creating the Ark-style `/ark` storage layout with `ark`, `video` and `render` group membership, and adding the optional `woman` alias for `man`. Read-only commands include `lydsys info`, `lydsys storage list`, and `lydsys storage status`. The `/ark` layout uses `Containers`, `Media`, `Share`, and `Configs`; it does not relocate Podman's graph root or migrate existing data.
+Run `sudo lydsys` after installation. The `lydhelp` command is included by default and provides topic-based terminal help for files, folders, search, permissions, storage, processes, networking, packages and archives. It offers optional configuration tasks for system updates, KDE workstation tools, gaming, Btrfs mount options, Snapper, Flatpak, Podman, TuneD, Cockpit, SSH, Tailscale, virtualization, legacy Intel VA-API, automatic APT updates, removing KDE to make a desktop install headless, creating the Ark-style `/ark` storage layout with `ark`, `video` and `render` group membership, adding the optional `woman` alias for `man`, and applying the Mystical KDE Global Theme. Read-only commands include `lydsys info`, `lydsys storage list`, and `lydsys storage status`. The `/ark` layout uses `Containers`, `Media`, `Share`, and `Configs`; it does not relocate Podman's graph root or migrate existing data.
+
+The Mystical theme is copied from the Lyd Ark Themes project into this repository under `themes/mystical/`. It is installed in the desktop image as a KDE Plasma 6 Global Theme, standalone colour scheme, Plasma Style, wallpaper package, and Plasma splash package. The installer also preserves the original illustrated moon, triple-moon, crystal, lavender, sage, and pentacle SVG assets. System XDG defaults select the Mystical colour scheme and Plasma Style for new desktop users while retaining Breeze's application widget style, icon theme, cursor, and window-decoration implementation for compatibility. GTK integration uses Debian's Breeze GTK theme and KDE GTK configuration module so GTK applications remain visually coordinated. Existing users can apply the full package from System Settings → Appearance → Global Theme or with `sudo lydsys run 18`. The SVG artwork pack is not represented as a complete application icon theme, and custom cursor artwork / a custom SDDM login theme are not included yet.
 
 The installer defaults to a guided UEFI/GPT layout with a 1 GiB EFI System Partition, an 8 GiB swap partition, and the remaining space as Btrfs. The installer still asks you to choose the target disk and confirm partition changes; it does not silently erase a disk. Debian Installer creates the root subvolume (`@rootfs`), and a late-install step creates a sibling `@home` subvolume, migrates the initial home-directory contents, applies `noatime,compress=zstd:3`, and configures Snapper/timers when Snapper is present. This post-install path needs testing in both UEFI virtual machines and real hardware before release. Manual partitioning remains available, but the automatic post-install subvolume step expects the standard Btrfs root layout. Snapper snapshots are not backups.
 
@@ -63,6 +66,7 @@ For Ivy Bridge Intel HD Graphics (such as the i7-3770S' integrated GPU), the leg
 
 - The live system and installed system are separate environments. The included live installer is Debian Installer's live mode; verify the installer path and installed package persistence during the first test cycle.
 - Both profiles use Debian's `main contrib non-free non-free-firmware` archive areas to make firmware and optional non-free driver packages available.
+- Mystical is currently included only in the KDE desktop image; the server image remains headless and does not install Plasma theme packages.
 - The ISO build itself does not create a custom APT repository. Installed systems receive normal Debian updates. A project-owned signed APT repository can be added later for lydsys and distribution packages.
 - Snapper snapshots are not backups.
 - The workflow uses GitHub-hosted runners and may approach runner storage/time limits as images grow. Artifacts have a 14-day retention period.
@@ -73,7 +77,9 @@ For Ivy Bridge Intel HD Graphics (such as the i7-3770S' integrated GPU), the leg
 .github/workflows/       CI build and tagged release
 profiles/desktop/        KDE image configuration and package list
 profiles/server/         server image configuration and package list
+themes/mystical/         copied Ark theme source and KDE Plasma components
 scripts/build-iso.sh     local profile builder
+scripts/install-mystical-theme.sh  stages Mystical into the desktop image
 scripts/lydsys           installed configuration utility
 ```
 
