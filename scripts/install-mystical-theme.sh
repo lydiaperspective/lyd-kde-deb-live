@@ -69,6 +69,7 @@ ColorScheme=Mystical
 AccentColor=152,116,196
 
 [KDE]
+LookAndFeelPackage=org.lydark.mystical.desktop
 widgetStyle=Breeze
 
 [Icons]
