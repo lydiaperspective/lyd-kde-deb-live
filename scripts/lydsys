@@ -3,6 +3,9 @@
 set -Eeuo pipefail
 
 VERSION="0.1.0"
+if [[ $EUID -ne 0 && "${1:-}" != "--help" && "${1:-}" != "-h" && "${1:-}" != "help" ]]; then
+  exec sudo -- "$0" "$@"
+fi
 LOG_DIR="/var/log/lydsys"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/lydsys-$(date +%F).log"
@@ -40,7 +43,7 @@ task_update() {
 }
 
 task_desktop_tools() {
-  apt_install kde-config-sddm plasma-discover plasma-discover-backend-flatpak \
+  apt_install sddm-kcm plasma-discover plasma-discover-backend-flatpak \
     dolphin konsole kate okular spectacle ark firefox-esr
 }
 
