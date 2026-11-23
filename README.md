@@ -21,7 +21,6 @@ sudo apt install live-build debootstrap squashfs-tools xorriso isolinux syslinux
 ```
 
 The build host must use Debian 13 (Trixie) live-build version `1:20250505` or newer. Ubuntu 24.04 ships an older live-build with obsolete Debian Installer package names; the local script now checks this and stops rather than running a known-incompatible build. GitHub Actions builds inside a Debian Trixie container.
-```
 
 Build either image:
 
