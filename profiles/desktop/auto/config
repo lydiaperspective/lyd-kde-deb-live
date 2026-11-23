@@ -20,7 +20,7 @@ lb config noauto \
   --apt-recommends true \
   --apt-secure true \
   --security false \
-  --firmware-binary false \
+  --firmware-binary true \
   --firmware-chroot true \
   --iso-application "lyd KDE Debian Live Desktop" \
   --iso-publisher "lyd KDE Debian Live" \
