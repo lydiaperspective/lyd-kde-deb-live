@@ -35,6 +35,13 @@ if [[ -z "$LB_VERSION" ]] || ! dpkg --compare-versions "$LB_VERSION" ge "1:20250
   exit 1
 fi
 
+for tool in rsvg-convert grub-mkfont; do
+  command -v "$tool" >/dev/null || {
+    echo "Missing build dependency: $tool. Install librsvg2-bin and grub-common." >&2
+    exit 1
+  }
+done
+
 mkdir -p "$PROFILE_DIR/config/includes.chroot/usr/local/sbin"
 install -m 0755 "$ROOT_DIR/scripts/lydsys" \
   "$PROFILE_DIR/config/includes.chroot/usr/local/sbin/lydsys"
