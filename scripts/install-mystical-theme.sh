@@ -80,7 +80,7 @@ EOF
 # Preserve the source tree and installer for future edits/re-application.
 if [[ "$SOURCE" != "$(dest /usr/share/lyd/themes/mystical)" ]]; then
   install -d "$(dest /usr/share/lyd/themes)"
-  cp -a "$SOURCE" "$(dest /usr/share/lyd/themes/mystical"
+  cp -a "$SOURCE" "$(dest /usr/share/lyd/themes/mystical)"
 fi
 install -d "$(dest /usr/local/lib/lyd)"
 install -m 0755 "$SCRIPT_DIR/$(basename -- "$0")" "$(dest /usr/local/lib/lyd/install-mystical-theme.sh)" 2>/dev/null || true
