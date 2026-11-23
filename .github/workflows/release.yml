@@ -42,6 +42,10 @@ jobs:
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/bin/lydsetup"
           install -D -m 0755 scripts/lyd-btrfs-postinstall \
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lyd-btrfs-postinstall"
+          if [ "${{ matrix.profile }}" = "server" ]; then
+            install -D -m 0755 scripts/lyd-firewall-postinstall \
+              "profiles/server/config/includes.chroot/usr/local/sbin/lyd-firewall-postinstall"
+          fi
           bash scripts/stage-grub-btrfs.sh "profiles/${{ matrix.profile }}/config/includes.chroot"
           if [ "${{ matrix.profile }}" = "desktop" ]; then
             bash scripts/install-grub-theme.sh \
@@ -65,6 +69,7 @@ jobs:
           bash -n scripts/lydsetup
           bash -n scripts/lydhelp
           bash -n scripts/lyd-btrfs-postinstall
+          bash -n scripts/lyd-firewall-postinstall
           bash -n scripts/stage-grub-btrfs.sh
           bash -n "profiles/${{ matrix.profile }}/config/includes.chroot/etc/grub.d/41_snapshots-btrfs"
           bash -n scripts/install-mystical-theme.sh
