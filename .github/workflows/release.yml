@@ -41,6 +41,12 @@ jobs:
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/bin/lydhelp"
           install -D -m 0755 scripts/lyd-btrfs-postinstall \
             "profiles/${{ matrix.profile }}/config/includes.chroot/usr/local/sbin/lyd-btrfs-postinstall"
+          bash scripts/install-grub-theme.sh \
+            --root "profiles/${{ matrix.profile }}/config/includes.chroot" \
+            --source "$GITHUB_WORKSPACE/themes/mystical/wallpaper/contents/images/1920x1080.svg" \
+            --iso-output "profiles/${{ matrix.profile }}/config/includes.binary/boot/grub/themes"
+          install -D -m 0755 scripts/9999-grub-theme.hook.binary \
+            "profiles/${{ matrix.profile }}/config/hooks/live/9999-grub-theme.hook.binary"
           if [ "${{ matrix.profile }}" = "desktop" ]; then
             bash scripts/install-mystical-theme.sh \
               --root "profiles/desktop/config/includes.chroot" \
