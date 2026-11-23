@@ -49,7 +49,7 @@ task_update() {
 }
 
 task_desktop_tools() {
-  apt_install sddm-kcm plasma-discover plasma-discover-backend-flatpak \
+  apt_install kde-config-sddm plasma-discover plasma-discover-backend-flatpak \
     dolphin konsole kate okular spectacle ark firefox-esr
 }
 
