@@ -108,6 +108,11 @@ if [[ "$PROFILE" == desktop ]]; then
   install -D -m 0644 "$INC/usr/share/konsole/Lyd-Mystical.profile" /usr/share/konsole/Lyd-Mystical.profile
   install -D -m 0644 "$INC/etc/xdg/konsolerc" /etc/xdg/konsolerc
   log "Installed Mystical KDE theme, wallpaper helper, and Konsole profile."
+  if ask "Run the optional desktop cleanup now? This can remove LibreOffice and other optional extras from older/full KDE installations."; then
+    /usr/local/sbin/lydsys run 20
+  else
+    log "Skipped optional desktop cleanup. You can run it later with: sudo lydsys run 20"
+  fi
   DESKTOP_USER="${SUDO_USER:-}"
   if [[ -n "$DESKTOP_USER" && "$DESKTOP_USER" != root ]] && id "$DESKTOP_USER" >/dev/null 2>&1 && command -v lookandfeeltool >/dev/null 2>&1; then
     if ask "Apply the Mystical Global Theme to '$DESKTOP_USER' now?"; then
